@@ -45,13 +45,18 @@ test('HTTP: autorização, login, cookies HttpOnly, CSRF e assets sem gabarito',
     assert.equal((await response.text()).includes('Quem construiu a arca?'), false);
   }
   for (const path of ['/src/questions.mjs', '/.data/despertos.sqlite', '/.git/config', '/package.json']) assert.equal((await fetch(`${f.base}${path}`)).status, 404);
-  for (const name of ['road-rage-latin-400-normal', 'montserrat-latin-700-normal', 'bebas-neue-latin-400-normal', 'poppins-latin-400-normal']) {
+  for (const name of ['anton-latin-400-normal', 'montserrat-latin-700-normal', 'bebas-neue-latin-400-normal', 'poppins-latin-400-normal']) {
     const font = await fetch(`${f.base}/fonts/${name}.woff2`);
     assert.equal(font.status, 200);
     assert.equal(font.headers.get('content-type'), 'font/woff2');
     assert.equal(Buffer.from(await font.arrayBuffer()).subarray(0, 4).toString(), 'wOF2');
   }
   assert.equal((await fetch(`${f.base}/fonts/arquivo-inexistente.woff2`)).status, 404);
+  const wordmark = await fetch(`${f.base}/brand/despertos-wordmark.ffe9732aa666.png`);
+  assert.equal(wordmark.status, 200);
+  assert.equal(wordmark.headers.get('content-type'), 'image/png');
+  assert.equal(wordmark.headers.get('cache-control'), 'public, max-age=31536000, immutable');
+  assert.deepEqual([...Buffer.from(await wordmark.arrayBuffer()).subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
 });
 test('HTTP: duas salas, respostas simultâneas, recibo seguro e resultado único', async t => {
   const f = await fixture(t), path = `/api/rooms/${f.roomId}`;

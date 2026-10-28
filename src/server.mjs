@@ -138,14 +138,15 @@ export function createApp({ game, secureCookies = process.env.COOKIE_SECURE === 
       }
       if (url.pathname.startsWith('/api/')) throw new GameError(404, 'Rota não encontrada.');
       if (req.method !== 'GET') throw new GameError(405, 'Método não permitido.');
-      const files = { '/app.js': ['app.js', 'text/javascript'], '/motion.js': ['motion.js', 'text/javascript'], '/styles.css': ['styles.css', 'text/css'], '/type-motion.css': ['type-motion.css', 'text/css'], '/mark.svg': ['mark.svg', 'image/svg+xml'] };
-      for (const name of ['road-rage-latin-400-normal', 'montserrat-latin-700-normal', 'bebas-neue-latin-400-normal', 'poppins-latin-400-normal', 'poppins-latin-400-italic', 'poppins-latin-500-normal', 'poppins-latin-600-normal', 'poppins-latin-700-normal', 'poppins-latin-800-normal']) {
+      const files = { '/app.js': ['app.js', 'text/javascript'], '/motion.js': ['motion.js', 'text/javascript'], '/styles.css': ['styles.css', 'text/css'], '/type-motion.css': ['type-motion.css', 'text/css'], '/mark.svg': ['mark.svg', 'image/svg+xml'], '/brand/despertos-wordmark.ffe9732aa666.png': ['brand/despertos-wordmark.ffe9732aa666.png', 'image/png'] };
+      for (const name of ['anton-latin-400-normal', 'montserrat-latin-700-normal', 'bebas-neue-latin-400-normal', 'poppins-latin-400-normal', 'poppins-latin-400-italic', 'poppins-latin-500-normal', 'poppins-latin-600-normal', 'poppins-latin-700-normal', 'poppins-latin-800-normal']) {
         files[`/fonts/${name}.woff2`] = [`fonts/${name}.woff2`, 'font/woff2'];
       }
       let asset = files[url.pathname];
       if (!asset && (/^\/(host|play)\/[a-f0-9-]{36}$/.test(url.pathname) || ['/', '/host', '/join'].includes(url.pathname))) asset = ['index.html', 'text/html'];
       if (!asset) throw new GameError(404, 'Página não encontrada.');
-      res.writeHead(200, { 'Content-Type': asset[1].startsWith('font/') ? asset[1] : `${asset[1]}; charset=utf-8` });
+      if (asset[1] === 'image/png') res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      res.writeHead(200, { 'Content-Type': asset[1].startsWith('font/') || asset[1] === 'image/png' ? asset[1] : `${asset[1]}; charset=utf-8` });
       res.end(await readFile(resolve(root, asset[0])));
     } catch (error) {
       if (res.headersSent) { res.end(); return; }

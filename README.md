@@ -92,9 +92,9 @@ O banco inicial em `src/questions.mjs` foi preparado para esta implementação, 
 
 ## Tipografia e animações
 
-Seguindo a referência visual, a marca usa **Road Rage**, com traços de pincel; os títulos usam **Montserrat Bold 700**; os textos usam **Poppins**, com pesos de 400 a 800 e itálico para citações. **Bebas Neue Regular** é usada nos números do cronômetro, PIN e placar. Os arquivos WOFF2 ficam em `public/fonts/`, incluindo os acentos do português; não há requisições ao Google Fonts. As famílias são distribuídas sob SIL Open Font License 1.1, com as licenças preservadas nessa pasta. `font-synthesis: none` impede que o navegador simule negrito ou itálico ausentes nos arquivos.
+A marca é uma **arte de lettering**, em `public/brand/despertos-wordmark.ffe9732aa666.png`: pinceladas inclinadas, DESPER branco e TOS laranja. A mesma imagem é usada na abertura e no cabeçalho, com texto acessível, proporção preservada e subtítulo separado em **Montserrat Bold 700**. É uma recriação gráfica baseada nos atributos da referência, gerada para este projeto; não foi extraída da imagem original e não representa a identificação de uma fonte original.
 
-Road Rage aproxima o aspecto pincelado da marca na imagem. A referência não identifica a fonte ou o arquivo original desse lettering; esta implementação não afirma reproduzi-lo exatamente.
+Os títulos e perguntas usam **Anton Regular**; os textos e alternativas usam **Poppins**, com pesos de 400 a 800 e itálico para citações; os números de cronômetro, PIN e placar usam **Bebas Neue Regular**. Essas famílias estão entre as opções escritas no painel fornecido. Os arquivos WOFF2 ficam em `public/fonts/`, com acentos do português e licenças SIL Open Font License 1.1. `font-synthesis: none` impede negrito e itálico simulados. Os critérios de comparação estão em `docs/visual-reference.md`.
 
 As fontes vieram dos pacotes Fontsource 5.3.0. O script opcional `python3 scripts/vendor_fonts.py` reproduz a importação e verifica o SHA-512 de cada pacote antes de gravar os arquivos. Ele não é necessário no build/deploy: os arquivos já estão no Git.
 
@@ -132,4 +132,4 @@ Esta versão não inclui recuperação de senha, editor de quizzes, convite por 
 
 No ambiente gerenciado, se o terminal negar abertura de portas (`listen EPERM`) ou impedir conexão com o proxy, execute os testes e os comandos de rede com a permissão de rede do executor. Não remova o proxy nem desabilite TLS.
 
-O teste visual opcional `python3 scripts/smoke_browser.py` requer Playwright para Python e Chromium em `/usr/bin/chromium`, disponíveis no ambiente preparado. Usa a porta local `3001`, cria um banco temporário e simula um anfitrião e dois celulares. Verifica cadastro, ingresso, sincronização, respostas, reconexão, ranking, encerramento e proteção do painel. Salva capturas em `/tmp/despertos-*.png`. Esses requisitos são apenas do teste visual, não da aplicação.
+O teste visual opcional `python3 scripts/smoke_browser.py` requer Playwright para Python e Chromium em `/usr/bin/chromium`, disponíveis no ambiente preparado. Usa a porta local `3001`, cria um banco temporário e simula um anfitrião e dois celulares. Verifica cadastro, ingresso, sincronização, respostas, reconexão, ranking, encerramento e proteção do painel. Salva capturas em uma pasta exclusiva `/tmp/despertos-ui-.../`, informada no início de cada execução, para evitar confusão com imagens de testes anteriores. Esses requisitos são apenas do teste visual, não da aplicação.

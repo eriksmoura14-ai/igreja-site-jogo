@@ -3,6 +3,9 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 
 folder = tempfile.mkdtemp(prefix='despertos-browser-')
+artifacts = Path(tempfile.mkdtemp(prefix='despertos-ui-'))
+Path('/tmp/despertos-ui-latest.txt').write_text(str(artifacts))
+print('Artefatos desta execução:', artifacts, flush=True)
 server = subprocess.Popen(['node', 'src/server.mjs'], cwd=Path(__file__).resolve().parents[1], env={**os.environ, 'DB_PATH': folder + '/game.sqlite', 'PORT': '3001', 'HOST': '127.0.0.1'}, stdout=subprocess.DEVNULL)
 try:
     for _ in range(60):
@@ -20,28 +23,33 @@ try:
         host.evaluate('document.fonts.ready')
         assert host.evaluate("[...document.fonts].some(f => f.family === 'Bebas Neue' && f.status === 'loaded')"), 'Bebas Neue não carregou'
         assert host.evaluate("[...document.fonts].some(f => f.family === 'Poppins' && f.status === 'loaded')"), 'Poppins não carregou'
-        assert host.evaluate("[...document.fonts].some(f => f.family === 'Road Rage' && f.status === 'loaded')"), 'Road Rage não carregou'
+        assert host.evaluate("[...document.fonts].some(f => f.family === 'Anton' && f.status === 'loaded')"), 'Anton não carregou'
         assert host.evaluate("[...document.fonts].some(f => f.family === 'Montserrat' && f.status === 'loaded')"), 'Montserrat Bold não carregou'
         assert host.evaluate("getComputedStyle(document.body).fontFamily.includes('Poppins')")
-        assert host.evaluate("getComputedStyle(document.querySelector('.hero-wordmark h1')).fontFamily.includes('Road Rage')")
-        assert host.evaluate("getComputedStyle(document.querySelector('.hero h2')).fontFamily.includes('Montserrat')")
-        assert host.evaluate("getComputedStyle(document.querySelector('.hero h2')).fontWeight === '700'")
+        assert host.locator('.hero-lettering').evaluate('e => e.complete && e.naturalWidth === 2142 && e.naturalHeight === 734'), 'Arte da marca não carregou'
+        assert host.locator('.brand-lettering').evaluate('e => e.complete && e.naturalWidth === 2142'), 'Arte do cabeçalho não carregou'
+        assert host.locator('.hero-lettering').get_attribute('src') == host.locator('.brand-lettering').get_attribute('src'), 'Marcas divergentes entre abertura e cabeçalho'
+        assert host.evaluate("getComputedStyle(document.querySelector('.hero h2')).fontFamily.includes('Anton')")
+        assert host.evaluate("getComputedStyle(document.querySelector('.hero h2')).fontWeight === '400'")
         assert host.evaluate("getComputedStyle(document.querySelector('.hero-wordmark h1')).fontStyle === 'normal'")
         assert host.evaluate("getComputedStyle(document.body).fontSynthesis === 'none'")
         host.wait_for_timeout(650)
-        host.screenshot(path='/tmp/despertos-home.png', full_page=True)
+        host.screenshot(path=str(artifacts / 'home.png'), full_page=True)
         assert host.locator('h1').inner_text() == 'DESPERTOS'
         mobile=browser.new_context(viewport={'width':390,'height':844},is_mobile=True).new_page()
         mobile.goto('http://127.0.0.1:3001/')
         mobile.evaluate('document.fonts.ready')
         mobile.wait_for_timeout(650)
-        mobile.screenshot(path='/tmp/despertos-mobile-home.png',full_page=True)
+        mobile.screenshot(path=str(artifacts / 'mobile-home.png'),full_page=True)
         mark=mobile.locator('.hero-wordmark').bounding_box()
         assert mark['x'] >= 0 and mark['x'] + mark['width'] <= 390, 'Marca cortada no celular'
         for width in [320, 768, 1024, 1440]:
             mobile.set_viewport_size({'width':width,'height':900})
             mark=mobile.locator('.hero-wordmark').bounding_box()
             assert mark['x'] >= 0 and mark['x'] + mark['width'] <= width, f'Marca cortada em {width}px'
+            image_box=mobile.locator('.hero-lettering').bounding_box()
+            assert abs(image_box['width'] / image_box['height'] - 2142/734) < .01, f'Marca deformada em {width}px'
+            assert mobile.evaluate('document.documentElement.scrollWidth <= innerWidth'), f'Overflow em {width}px'
         mobile.close()
         reduced=browser.new_context(viewport={'width':390,'height':844},reduced_motion='reduce').new_page()
         reduced.goto('http://127.0.0.1:3001/')
@@ -49,7 +57,7 @@ try:
         reduced.locator('.team-choice').filter(has_text='Leões').click()
         assert reduced.locator('input[value="lion"]').is_checked()
         assert reduced.evaluate('document.getAnimations().length') == 0, 'Movimento reduzido não respeitado'
-        reduced.screenshot(path='/tmp/despertos-reduced-motion.png',full_page=True)
+        reduced.screenshot(path=str(artifacts / 'reduced-motion.png'),full_page=True)
         reduced.close()
         host.goto('http://127.0.0.1:3001/host')
         host.get_by_role('button', name='Criar conta', exact=True).click()
@@ -75,7 +83,7 @@ try:
             page.get_by_role('heading',name=team,exact=True).wait_for()
             players.append(page)
         host.wait_for_timeout(200)
-        host.screenshot(path='/tmp/despertos-host-lobby.png',full_page=True)
+        host.screenshot(path=str(artifacts / 'host-lobby.png'),full_page=True)
         assert host.locator('.lobby-bar').inner_text().startswith('2')
         host.get_by_role('button',name='Iniciar desafio').click()
         host.locator('#countdown').wait_for()
@@ -84,8 +92,8 @@ try:
         ana,bia=players
         ana.get_by_role('heading',name='Quem construiu a arca?').wait_for()
         ana.wait_for_timeout(650)
-        ana.screenshot(path='/tmp/despertos-player-question.png',full_page=True)
-        host.screenshot(path='/tmp/despertos-host-question.png',full_page=True)
+        ana.screenshot(path=str(artifacts / 'player-question.png'),full_page=True)
+        host.screenshot(path=str(artifacts / 'host-question.png'),full_page=True)
         assert ana.locator('[data-command]').count()==0
         assert ana.locator('.pin-card').count()==0
         host.get_by_role('button',name='Encerrar partida',exact=True).click()
@@ -105,7 +113,7 @@ try:
         host.wait_for_timeout(1000)
         assert '100' in host.locator('.ranking-row').first.inner_text()
         ana.get_by_role('heading',name='Classificação',exact=True).wait_for()
-        ana.screenshot(path='/tmp/despertos-player-ranking.png',full_page=True)
+        ana.screenshot(path=str(artifacts / 'player-ranking.png'),full_page=True)
         host.get_by_role('button',name='Encerrar partida',exact=True).click()
         host.get_by_role('dialog').get_by_role('button',name='Encerrar partida',exact=True).click()
         host.get_by_role('heading',name='Essa vitória é nossa.').wait_for()
