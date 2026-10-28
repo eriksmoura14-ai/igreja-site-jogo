@@ -11,7 +11,7 @@ services:
     buildCommand: npm ci --ignore-scripts --no-audit --no-fund && npm run check && npm test
     startCommand: npm start
     healthCheckPath: /api/health
-    autoDeploy: false
+    autoDeploy: true
     envVars:
       - key: NODE_VERSION
         value: 24.19.0

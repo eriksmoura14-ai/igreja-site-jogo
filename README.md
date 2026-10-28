@@ -18,7 +18,7 @@ O botão abre a criação do serviço na sua conta Render. Ele não é o endere�
 
 O `render.yaml` configura Node 24.19.0, uma instância, `npm start`, health check em `/api/health` e cookies Secure. A origem HTTPS é obtida automaticamente de `RENDER_EXTERNAL_URL`, fornecida pelo Render. Se conectar um domínio próprio, configure `PUBLIC_ORIGIN` com essa origem exata, sem barra final (ex.: `https://jogo.suaigreja.com.br`).
 
-O deploy automático está desativado para evitar que um push interrompa uma partida. Para atualizar depois, use **Manual Deploy → Deploy latest commit** no serviço, fora do horário do jogo.
+O `render.yaml` habilita o deploy automático dos novos commits da branch `main`. Se o serviço foi criado como Blueprint com sincronização automática, o Render pode aplicar essa configuração ao sincronizar o arquivo. Um serviço criado manualmente precisa ter **Auto-Deploy** habilitado no painel. A alteração no GitHub não confirma que o Render já a aplicou. Publique fora do horário do jogo, pois um deploy reinicia o processo e, no plano gratuito, pode apagar dados. A opção **Manual Deploy → Deploy latest commit** continua disponível no painel.
 
 ### Demonstração gratuita versus dados persistentes
 
