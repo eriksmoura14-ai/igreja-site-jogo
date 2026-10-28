@@ -20,8 +20,14 @@ try:
         host.evaluate('document.fonts.ready')
         assert host.evaluate("[...document.fonts].some(f => f.family === 'Bebas Neue' && f.status === 'loaded')"), 'Bebas Neue não carregou'
         assert host.evaluate("[...document.fonts].some(f => f.family === 'Poppins' && f.status === 'loaded')"), 'Poppins não carregou'
+        assert host.evaluate("[...document.fonts].some(f => f.family === 'Road Rage' && f.status === 'loaded')"), 'Road Rage não carregou'
+        assert host.evaluate("[...document.fonts].some(f => f.family === 'Montserrat' && f.status === 'loaded')"), 'Montserrat Bold não carregou'
         assert host.evaluate("getComputedStyle(document.body).fontFamily.includes('Poppins')")
-        assert host.evaluate("getComputedStyle(document.querySelector('h1')).fontFamily.includes('Bebas Neue')")
+        assert host.evaluate("getComputedStyle(document.querySelector('.hero-wordmark h1')).fontFamily.includes('Road Rage')")
+        assert host.evaluate("getComputedStyle(document.querySelector('.hero h2')).fontFamily.includes('Montserrat')")
+        assert host.evaluate("getComputedStyle(document.querySelector('.hero h2')).fontWeight === '700'")
+        assert host.evaluate("getComputedStyle(document.querySelector('.hero-wordmark h1')).fontStyle === 'normal'")
+        assert host.evaluate("getComputedStyle(document.body).fontSynthesis === 'none'")
         host.wait_for_timeout(650)
         host.screenshot(path='/tmp/despertos-home.png', full_page=True)
         assert host.locator('h1').inner_text() == 'DESPERTOS'

@@ -92,7 +92,9 @@ O banco inicial em `src/questions.mjs` foi preparado para esta implementação, 
 
 ## Tipografia e animações
 
-Seguindo a referência visual, os títulos usam **Bebas Neue** e os textos usam **Poppins**, com pesos de 400 a 800 e itálico para citações. Os arquivos WOFF2 ficam em `public/fonts/`, incluindo os acentos do português; não há requisições ao Google Fonts. As duas famílias são distribuídas sob SIL Open Font License 1.1, com as licenças preservadas nessa pasta.
+Seguindo a referência visual, a marca usa **Road Rage**, com traços de pincel; os títulos usam **Montserrat Bold 700**; os textos usam **Poppins**, com pesos de 400 a 800 e itálico para citações. **Bebas Neue Regular** é usada nos números do cronômetro, PIN e placar. Os arquivos WOFF2 ficam em `public/fonts/`, incluindo os acentos do português; não há requisições ao Google Fonts. As famílias são distribuídas sob SIL Open Font License 1.1, com as licenças preservadas nessa pasta. `font-synthesis: none` impede que o navegador simule negrito ou itálico ausentes nos arquivos.
+
+Road Rage aproxima o aspecto pincelado da marca na imagem. A referência não identifica a fonte ou o arquivo original desse lettering; esta implementação não afirma reproduzi-lo exatamente.
 
 As fontes vieram dos pacotes Fontsource 5.3.0. O script opcional `python3 scripts/vendor_fonts.py` reproduz a importação e verifica o SHA-512 de cada pacote antes de gravar os arquivos. Ele não é necessário no build/deploy: os arquivos já estão no Git.
 

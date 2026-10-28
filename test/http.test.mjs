@@ -45,7 +45,7 @@ test('HTTP: autorização, login, cookies HttpOnly, CSRF e assets sem gabarito',
     assert.equal((await response.text()).includes('Quem construiu a arca?'), false);
   }
   for (const path of ['/src/questions.mjs', '/.data/despertos.sqlite', '/.git/config', '/package.json']) assert.equal((await fetch(`${f.base}${path}`)).status, 404);
-  for (const name of ['bebas-neue-latin-400-normal', 'poppins-latin-400-normal']) {
+  for (const name of ['road-rage-latin-400-normal', 'montserrat-latin-700-normal', 'bebas-neue-latin-400-normal', 'poppins-latin-400-normal']) {
     const font = await fetch(`${f.base}/fonts/${name}.woff2`);
     assert.equal(font.status, 200);
     assert.equal(font.headers.get('content-type'), 'font/woff2');

@@ -1,5 +1,19 @@
 /* Fontes locais OFL: Fontsource 5.3.0. Os arquivos incluem os acentos do português. */
 @font-face {
+  font-family: 'Road Rage';
+  src: url('/fonts/road-rage-latin-400-normal.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Montserrat';
+  src: url('/fonts/montserrat-latin-700-normal.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+@font-face {
   font-family: 'Bebas Neue';
   src: url('/fonts/bebas-neue-latin-400-normal.woff2') format('woff2');
   font-style: normal;
@@ -51,22 +65,26 @@
 
 :root {
   --font-text: 'Poppins', 'Segoe UI', Arial, sans-serif;
-  --font-title: 'Bebas Neue', Impact, 'Arial Narrow', sans-serif;
+  --font-title: 'Montserrat', 'Segoe UI', Arial, sans-serif;
+  --font-brand: 'Road Rage', cursive;
+  --font-number: 'Bebas Neue', Impact, 'Arial Narrow', sans-serif;
   font-family: var(--font-text);
+  font-synthesis: none;
 }
 
 h1, h2, h3 {
   font-family: var(--font-title);
-  font-weight: 400;
-  letter-spacing: .035em;
+  font-weight: 700;
+  letter-spacing: -.025em;
   line-height: 1.12;
 }
 
 .brand > span {
-  font-family: var(--font-title);
-  font-size: 31px;
+  font-family: var(--font-brand);
+  font-size: 37px;
   font-weight: 400;
-  letter-spacing: .025em;
+  font-style: normal;
+  letter-spacing: -.015em;
 }
 
 .brand small {
@@ -75,27 +93,28 @@ h1, h2, h3 {
 }
 
 .hero-wordmark h1 {
-  font-family: var(--font-title);
+  font-family: var(--font-brand);
   font-weight: 400;
-  font-size: clamp(92px, 10vw, 148px);
-  letter-spacing: -.025em;
+  font-style: normal;
+  font-size: clamp(90px, 10.5vw, 152px);
+  letter-spacing: -.01em;
 }
 
-.hero h2 { font-size: clamp(40px, 4vw, 58px); letter-spacing: .015em; }
+.hero h2 { font-size: clamp(30px, 3.2vw, 44px); font-weight: 700; letter-spacing: -.035em; }
 .hero-wordmark > div { font-family: var(--font-text); font-weight: 600; }
-.entry-card h2 { font-size: 32px; letter-spacing: .02em; }
-.how-grid h3 { font-size: 21px; letter-spacing: .035em; }
-.lobby-team-head h3 { font-size: 24px; letter-spacing: .04em; }
-.dashboard-heading h1 { font-size: 42px; letter-spacing: .025em; }
-.create-card h2 { font-size: 35px; letter-spacing: .025em; }
-.host-question h1 { font-size: clamp(34px, 4vw, 58px); letter-spacing: .025em; }
-.player-question h1 { font-size: 35px; letter-spacing: .025em; line-height: 1.15; }
-.leaderboard-title h1 { font-size: 48px; letter-spacing: .03em; }
-.player-main .leaderboard-title h1 { font-size: 35px; letter-spacing: .03em; }
-.result-screen h1 { font-size: 58px; letter-spacing: .025em; }
-.player-result h1 { font-size: 40px; letter-spacing: .025em; }
+.entry-card h2 { font-size: 25px; letter-spacing: -.025em; }
+.how-grid h3 { font-size: 15px; letter-spacing: -.025em; }
+.lobby-team-head h3 { font-size: 19px; letter-spacing: -.02em; }
+.dashboard-heading h1 { font-size: 34px; letter-spacing: -.03em; }
+.create-card h2 { font-size: 28px; letter-spacing: -.025em; }
+.host-question h1 { font-size: clamp(28px, 3.2vw, 44px); letter-spacing: -.025em; }
+.player-question h1 { font-size: 26px; letter-spacing: -.025em; line-height: 1.25; }
+.leaderboard-title h1 { font-size: 38px; letter-spacing: -.03em; }
+.player-main .leaderboard-title h1 { font-size: 28px; letter-spacing: -.03em; }
+.result-screen h1 { font-size: 44px; letter-spacing: -.03em; }
+.player-result h1 { font-size: 32px; letter-spacing: -.03em; }
 .countdown-number, .timer, .pin-card strong, .hero-stats strong, .rank-number, .personal-points {
-  font-family: var(--font-title);
+  font-family: var(--font-number);
   font-weight: 400;
   font-variant-numeric: tabular-nums;
   letter-spacing: .025em;
@@ -147,41 +166,41 @@ h1, h2, h3 {
 .celebration-particle.color-3 { background: #a781ff; }
 
 @media (max-width: 1100px) {
-  .hero-wordmark h1 { font-size: clamp(85px, 10vw, 120px); }
+  .hero-wordmark h1 { font-size: clamp(68px, 9.5vw, 110px); }
 }
 @media (max-width: 820px) {
-  .hero-wordmark h1 { font-size: clamp(68px, 10vw, 90px); }
-  .hero h2 { font-size: 41px; }
-  .entry-card h2 { font-size: 29px; }
-  .dashboard-heading h1 { font-size: 36px; }
-  .lobby-team-head h3 { font-size: 24px; }
+  .hero-wordmark h1 { font-size: clamp(54px, 9.2vw, 85px); }
+  .hero h2 { font-size: 32px; }
+  .entry-card h2 { font-size: 25px; }
+  .dashboard-heading h1 { font-size: 30px; }
+  .lobby-team-head h3 { font-size: 18px; }
 }
 @media (max-width: 600px) {
-  .brand > span, .player-site .brand > span { font-size: 29px; }
-  .hero-wordmark h1 { font-size: clamp(78px, 25vw, 132px); }
-  .hero h2 { font-size: 43px; }
+  .brand > span, .player-site .brand > span { font-size: 31px; }
+  .hero-wordmark h1 { font-size: clamp(64px, 22vw, 120px); }
+  .hero h2 { font-size: 32px; }
   .hero-stats strong { font-size: 38px; }
-  .entry-card h2 { font-size: 32px; }
+  .entry-card h2 { font-size: 25px; }
   .entry-card form > label { font-size: 8px; letter-spacing: 1px; }
   legend { letter-spacing: .6px; }
   .team-choice strong { font-size: 9px; }
   .team-choice span { font-size: 6px; }
-  .how-grid h3 { font-size: 21px; }
-  .lobby-team-head h3 { font-size: 22px; }
+  .how-grid h3 { font-size: 15px; }
+  .lobby-team-head h3 { font-size: 18px; }
   .pin-card strong { font-size: 57px; }
-  .host-question h1 { font-size: 37px; }
-  .player-question h1 { font-size: 33px; }
+  .host-question h1 { font-size: 28px; }
+  .player-question h1 { font-size: 25px; }
   .player-question-meta { gap: 10px; }
   .player-question-meta .timer { font-size: 29px; }
-  .player-result h1 { font-size: 38px; }
-  .result-screen h1 { font-size: 46px; }
-  .leaderboard-title h1, .player-main .leaderboard-title h1 { font-size: 35px; }
+  .player-result h1 { font-size: 30px; }
+  .result-screen h1 { font-size: 36px; }
+  .leaderboard-title h1, .player-main .leaderboard-title h1 { font-size: 29px; }
   .ranking-info strong { letter-spacing: 0; }
   .player-main .ranking-info strong { font-size: 11px; }
-  .player-instructions h2 { font-size: 25px; }
+  .player-instructions h2 { font-size: 21px; }
   .player-main .personal-points { font-size: 62px; }
   .nav-host { font-size: 9px; padding: 9px; }
-  .join-page h1, .auth-page h1 { font-size: 38px; }
+  .join-page h1, .auth-page h1 { font-size: 32px; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

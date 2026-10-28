@@ -8,6 +8,8 @@ import urllib.request
 
 DEST = Path(__file__).resolve().parents[1] / 'public' / 'fonts'
 PACKAGES = {
+    'road-rage': ('NIVshvT9dt50lMZi+sSqdSvdntuVnX8nhH2oAwslXR4S6dwMH5MTg1jHIn3Rb36hs0hBOPKUII/PItc2jN0oZg==', [(400, 'normal')]),
+    'montserrat': ('iQPDtZOnmM5ih4JBGaMSXisRap0ixb9bAUw2hDtY7EjVfaqiiNlKtVuJl9XclxUwtwMMHNcWXfQR6zI9x05+Tg==', [(700, 'normal')]),
     'bebas-neue': ('nCxMEb9Bg9sjNWm9TIOsvHKDMLRUfEZPWpLgYu6m9KavZZVSA/WoHzI5wROwqA+eNwEi/PNBAcB5Co7HA3S0Cw==', [(400, 'normal')]),
     'poppins': ('cms1nM7U6SN8epIV1WMVOV8VsA645aSm3wHfzIQnkk188U341ThbJGSl2Sv54V29gnDbT2arMPfLzvVIIVCceQ==', [(400, 'normal'), (400, 'italic'), (500, 'normal'), (600, 'normal'), (700, 'normal'), (800, 'normal')]),
 }
