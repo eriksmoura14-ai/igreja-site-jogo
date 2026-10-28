@@ -1,0 +1,194 @@
+/* Fontes locais OFL: Fontsource 5.3.0. Os arquivos incluem os acentos do português. */
+@font-face {
+  font-family: 'Bebas Neue';
+  src: url('/fonts/bebas-neue-latin-400-normal.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Poppins';
+  src: url('/fonts/poppins-latin-400-normal.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Poppins';
+  src: url('/fonts/poppins-latin-400-italic.woff2') format('woff2');
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Poppins';
+  src: url('/fonts/poppins-latin-500-normal.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Poppins';
+  src: url('/fonts/poppins-latin-600-normal.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Poppins';
+  src: url('/fonts/poppins-latin-700-normal.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Poppins';
+  src: url('/fonts/poppins-latin-800-normal.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+}
+
+:root {
+  --font-text: 'Poppins', 'Segoe UI', Arial, sans-serif;
+  --font-title: 'Bebas Neue', Impact, 'Arial Narrow', sans-serif;
+  font-family: var(--font-text);
+}
+
+h1, h2, h3 {
+  font-family: var(--font-title);
+  font-weight: 400;
+  letter-spacing: .035em;
+  line-height: 1.12;
+}
+
+.brand > span {
+  font-family: var(--font-title);
+  font-size: 31px;
+  font-weight: 400;
+  letter-spacing: .025em;
+}
+
+.brand small {
+  font-family: var(--font-text);
+  letter-spacing: .3em;
+}
+
+.hero-wordmark h1 {
+  font-family: var(--font-title);
+  font-weight: 400;
+  font-size: clamp(92px, 10vw, 148px);
+  letter-spacing: -.025em;
+}
+
+.hero h2 { font-size: clamp(40px, 4vw, 58px); letter-spacing: .015em; }
+.hero-wordmark > div { font-family: var(--font-text); font-weight: 600; }
+.entry-card h2 { font-size: 32px; letter-spacing: .02em; }
+.how-grid h3 { font-size: 21px; letter-spacing: .035em; }
+.lobby-team-head h3 { font-size: 24px; letter-spacing: .04em; }
+.dashboard-heading h1 { font-size: 42px; letter-spacing: .025em; }
+.create-card h2 { font-size: 35px; letter-spacing: .025em; }
+.host-question h1 { font-size: clamp(34px, 4vw, 58px); letter-spacing: .025em; }
+.player-question h1 { font-size: 35px; letter-spacing: .025em; line-height: 1.15; }
+.leaderboard-title h1 { font-size: 48px; letter-spacing: .03em; }
+.player-main .leaderboard-title h1 { font-size: 35px; letter-spacing: .03em; }
+.result-screen h1 { font-size: 58px; letter-spacing: .025em; }
+.player-result h1 { font-size: 40px; letter-spacing: .025em; }
+.countdown-number, .timer, .pin-card strong, .hero-stats strong, .rank-number, .personal-points {
+  font-family: var(--font-title);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .025em;
+}
+.pin-card strong { font-size: 56px; letter-spacing: .06em; }
+.countdown-number { font-size: 155px; }
+.hero-stats strong { font-size: 40px; }
+.timer { font-size: 32px; }
+.timer small { font-family: var(--font-text); }
+.personal-points { font-size: 64px; }
+.personal-points small { font-family: var(--font-text); }
+.answer-option span { font-family: var(--font-text); font-weight: 500; }
+.ranking-info strong { font-family: var(--font-text); font-weight: 600; }
+
+/* Os efeitos não atrasam o envio de uma resposta. */
+.team-choice { transition: border-color .18s, background-color .18s, translate .18s; }
+.team-choice:has(input:checked) { translate: 0 -3px; box-shadow: 0 5px 20px color-mix(in srgb, var(--team) 12%, transparent); }
+.answer-option { transition: background-color .16s, border-color .16s, box-shadow .16s; }
+.answer-option:focus-visible { outline-color: var(--option); }
+.answer-option:disabled { cursor: default; }
+.button:active:not(:disabled) { transform: translateY(1px); }
+.ranking-row { position: relative; }
+.ranking-row.my-team { box-shadow: inset 3px 0 0 var(--team); }
+.correct-answer { box-shadow: 0 0 30px #39dc870d; }
+.result-icon { box-shadow: 0 0 40px #39dc8712; }
+.player-emblem { box-shadow: 0 0 48px color-mix(in srgb, var(--team) 9%, transparent); }
+.timer.urgent { animation: timer-alert .9s ease-in-out 5; }
+@keyframes timer-alert { 50% { box-shadow: 0 0 0 5px #ff746415; } }
+
+.celebration-layer {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 80;
+  contain: strict;
+}
+.celebration-particle {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 7px;
+  height: 13px;
+  border-radius: 2px;
+  background: var(--orange);
+}
+.celebration-particle.color-1 { background: #39dc87; }
+.celebration-particle.color-2 { background: #27baff; }
+.celebration-particle.color-3 { background: #a781ff; }
+
+@media (max-width: 1100px) {
+  .hero-wordmark h1 { font-size: clamp(85px, 10vw, 120px); }
+}
+@media (max-width: 820px) {
+  .hero-wordmark h1 { font-size: clamp(68px, 10vw, 90px); }
+  .hero h2 { font-size: 41px; }
+  .entry-card h2 { font-size: 29px; }
+  .dashboard-heading h1 { font-size: 36px; }
+  .lobby-team-head h3 { font-size: 24px; }
+}
+@media (max-width: 600px) {
+  .brand > span, .player-site .brand > span { font-size: 29px; }
+  .hero-wordmark h1 { font-size: clamp(78px, 25vw, 132px); }
+  .hero h2 { font-size: 43px; }
+  .hero-stats strong { font-size: 38px; }
+  .entry-card h2 { font-size: 32px; }
+  .entry-card form > label { font-size: 8px; letter-spacing: 1px; }
+  legend { letter-spacing: .6px; }
+  .team-choice strong { font-size: 9px; }
+  .team-choice span { font-size: 6px; }
+  .how-grid h3 { font-size: 21px; }
+  .lobby-team-head h3 { font-size: 22px; }
+  .pin-card strong { font-size: 57px; }
+  .host-question h1 { font-size: 37px; }
+  .player-question h1 { font-size: 33px; }
+  .player-question-meta { gap: 10px; }
+  .player-question-meta .timer { font-size: 29px; }
+  .player-result h1 { font-size: 38px; }
+  .result-screen h1 { font-size: 46px; }
+  .leaderboard-title h1, .player-main .leaderboard-title h1 { font-size: 35px; }
+  .ranking-info strong { letter-spacing: 0; }
+  .player-main .ranking-info strong { font-size: 11px; }
+  .player-instructions h2 { font-size: 25px; }
+  .player-main .personal-points { font-size: 62px; }
+  .nav-host { font-size: 9px; padding: 9px; }
+  .join-page h1, .auth-page h1 { font-size: 38px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+  .team-choice:has(input:checked) { translate: none; }
+  .celebration-layer { display: none; }
+}

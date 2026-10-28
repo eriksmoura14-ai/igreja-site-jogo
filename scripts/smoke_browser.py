@@ -17,10 +17,18 @@ try:
         host = host_context.new_page()
         host.on('pageerror', lambda e: errors.append(str(e)))
         host.goto('http://127.0.0.1:3001/')
+        host.evaluate('document.fonts.ready')
+        assert host.evaluate("[...document.fonts].some(f => f.family === 'Bebas Neue' && f.status === 'loaded')"), 'Bebas Neue não carregou'
+        assert host.evaluate("[...document.fonts].some(f => f.family === 'Poppins' && f.status === 'loaded')"), 'Poppins não carregou'
+        assert host.evaluate("getComputedStyle(document.body).fontFamily.includes('Poppins')")
+        assert host.evaluate("getComputedStyle(document.querySelector('h1')).fontFamily.includes('Bebas Neue')")
+        host.wait_for_timeout(650)
         host.screenshot(path='/tmp/despertos-home.png', full_page=True)
         assert host.locator('h1').inner_text() == 'DESPERTOS'
         mobile=browser.new_context(viewport={'width':390,'height':844},is_mobile=True).new_page()
         mobile.goto('http://127.0.0.1:3001/')
+        mobile.evaluate('document.fonts.ready')
+        mobile.wait_for_timeout(650)
         mobile.screenshot(path='/tmp/despertos-mobile-home.png',full_page=True)
         mark=mobile.locator('.hero-wordmark').bounding_box()
         assert mark['x'] >= 0 and mark['x'] + mark['width'] <= 390, 'Marca cortada no celular'
@@ -29,6 +37,14 @@ try:
             mark=mobile.locator('.hero-wordmark').bounding_box()
             assert mark['x'] >= 0 and mark['x'] + mark['width'] <= width, f'Marca cortada em {width}px'
         mobile.close()
+        reduced=browser.new_context(viewport={'width':390,'height':844},reduced_motion='reduce').new_page()
+        reduced.goto('http://127.0.0.1:3001/')
+        reduced.evaluate('document.fonts.ready')
+        reduced.locator('.team-choice').filter(has_text='Leões').click()
+        assert reduced.locator('input[value="lion"]').is_checked()
+        assert reduced.evaluate('document.getAnimations().length') == 0, 'Movimento reduzido não respeitado'
+        reduced.screenshot(path='/tmp/despertos-reduced-motion.png',full_page=True)
+        reduced.close()
         host.goto('http://127.0.0.1:3001/host')
         host.get_by_role('button', name='Criar conta', exact=True).click()
         host.get_by_label('NOME DO ANFITRIÃO').fill('teste_visual')
@@ -52,21 +68,27 @@ try:
             page.wait_for_url('**/play/*')
             page.get_by_role('heading',name=team,exact=True).wait_for()
             players.append(page)
-        host.get_by_text('2',exact=True).first.wait_for() if False else None
         host.wait_for_timeout(200)
         host.screenshot(path='/tmp/despertos-host-lobby.png',full_page=True)
         assert host.locator('.lobby-bar').inner_text().startswith('2')
         host.get_by_role('button',name='Iniciar desafio').click()
+        host.locator('#countdown').wait_for()
+        assert host.evaluate("document.querySelector('#countdown').getAnimations().length > 0"), 'Contagem não animou'
         host.get_by_role('heading',name='Quem construiu a arca?').wait_for(timeout=8000)
         ana,bia=players
         ana.get_by_role('heading',name='Quem construiu a arca?').wait_for()
+        ana.wait_for_timeout(650)
         ana.screenshot(path='/tmp/despertos-player-question.png',full_page=True)
         host.screenshot(path='/tmp/despertos-host-question.png',full_page=True)
         assert ana.locator('[data-command]').count()==0
         assert ana.locator('.pin-card').count()==0
+        host.get_by_role('button',name='Encerrar partida',exact=True).click()
         ana.locator('[data-answer="A"]').click()
         ana.get_by_role('heading',name='Resposta enviada!').wait_for()
         host.wait_for_function("document.querySelector('.progress-line b')?.textContent === '1'")
+        assert host.get_by_role('dialog').is_visible(), 'Atualização ao vivo fechou a confirmação'
+        assert host.evaluate("document.querySelector('.host-question').getAnimations().length") == 0, 'Progresso repetiu a animação da pergunta'
+        host.get_by_role('button',name='Continuar jogando').click()
         bia.locator('[data-answer="B"]').click()
         ana.get_by_role('heading',name='Boa, você acertou!').wait_for()
         bia.get_by_role('heading',name='Na próxima, a gente acerta.').wait_for()
@@ -74,6 +96,7 @@ try:
         ana.get_by_role('heading',name='Boa, você acertou!').wait_for()
         host.get_by_role('button',name='Ver classificação').click()
         host.get_by_role('heading',name='Classificação',exact=True).wait_for()
+        host.wait_for_timeout(1000)
         assert '100' in host.locator('.ranking-row').first.inner_text()
         ana.get_by_role('heading',name='Classificação',exact=True).wait_for()
         ana.screenshot(path='/tmp/despertos-player-ranking.png',full_page=True)
@@ -89,6 +112,7 @@ try:
         assert not errors, errors
         print('PASS: início, cadastro, lobby, dois celulares, sincronização, respostas, resultado, retomada, ranking, encerramento e acesso sem sessão.')
         print('PASS: sem erros JavaScript ou overflow nas telas verificadas.')
+        print('PASS: fontes locais carregadas, contagem animada, progresso sem repetir entrada e movimento reduzido respeitado.')
         browser.close()
 finally:
     server.terminate()

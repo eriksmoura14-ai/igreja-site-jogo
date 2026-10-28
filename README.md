@@ -90,6 +90,16 @@ O banco inicial em `src/questions.mjs` foi preparado para esta implementação, 
 - `test/`: testes de domínio e integração HTTP/SSE, incluindo duas salas e dois jogadores.
 - `.github/workflows/ci.yml`: validação automática em Node 24.
 
+## Tipografia e animações
+
+Seguindo a referência visual, os títulos usam **Bebas Neue** e os textos usam **Poppins**, com pesos de 400 a 800 e itálico para citações. Os arquivos WOFF2 ficam em `public/fonts/`, incluindo os acentos do português; não há requisições ao Google Fonts. As duas famílias são distribuídas sob SIL Open Font License 1.1, com as licenças preservadas nessa pasta.
+
+As fontes vieram dos pacotes Fontsource 5.3.0. O script opcional `python3 scripts/vendor_fonts.py` reproduz a importação e verifica o SHA-512 de cada pacote antes de gravar os arquivos. Ele não é necessário no build/deploy: os arquivos já estão no Git.
+
+`public/type-motion.css` define as fontes e os estados visuais. `public/motion.js` concentra os efeitos: entrada de conteúdo, revelação ao rolar, escolha de equipe, toque nos botões, contagem regressiva, alternativas em sequência, confirmação de resposta, barras/posições do ranking e confetes breves em acertos e vitórias. As animações são decorativas e não atrasam respostas nem alteram o cronômetro do servidor.
+
+Snapshots repetidos não remontam a tela nem reiniciam efeitos. A preferência **reduzir movimento** do sistema desativa as animações e as comemorações; mudar essa preferência também cancela efeitos em andamento. Os testes em Chromium verificam fontes carregadas, celular/desktop, contagem animada, progresso sem repetir a entrada da pergunta e movimento reduzido.
+
 As tabelas SQLite guardam contas, hashes das sessões, salas, elenco, perguntas executadas, elegibilidade, respostas, lançamentos de pontos, recibos idempotentes e sequência durável de eventos. As transações e restrições únicas impedem resposta e pontuação duplicadas. Os eventos são anunciados **após o commit**; ao reconectar, SSE envia um snapshot atual filtrado pelo papel, em vez de reproduzir eventos privados antigos.
 
 O anfitrião autentica com usuário e senha (hash com scrypt). Cada participante recebe uma credencial aleatória própria em cookie HttpOnly. O servidor autoriza cada snapshot, conexão e comando e não expõe gabaritos enquanto a pergunta está aberta. Existe separação entre anfitrião autenticado e conteúdo do quiz; este MVP oferece um quiz comum a todas as contas, sem editor de autoria.

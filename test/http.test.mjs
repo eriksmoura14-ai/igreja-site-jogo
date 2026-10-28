@@ -39,12 +39,19 @@ test('HTTP: autorização, login, cookies HttpOnly, CSRF e assets sem gabarito',
   const login = await f.request('/api/auth/login', { username: 'anfitriao', password: 'senha-de-teste-123' });
   assert.equal(login.res.status, 200); assert.match(login.res.headers.get('set-cookie'), /HttpOnly; SameSite=Strict/);
   assert.equal((await f.request('/api/rooms', {}, f.a)).res.status, 401);
-  for (const path of ['/', '/join', '/host', `/host/${f.roomId}`, `/play/${f.roomId}`, '/app.js', '/styles.css']) {
+  for (const path of ['/', '/join', '/host', `/host/${f.roomId}`, `/play/${f.roomId}`, '/app.js', '/motion.js', '/styles.css', '/type-motion.css']) {
     const response = await fetch(`${f.base}${path}`);
     assert.equal(response.status, 200); assert.ok(response.headers.get('content-security-policy'));
     assert.equal((await response.text()).includes('Quem construiu a arca?'), false);
   }
   for (const path of ['/src/questions.mjs', '/.data/despertos.sqlite', '/.git/config', '/package.json']) assert.equal((await fetch(`${f.base}${path}`)).status, 404);
+  for (const name of ['bebas-neue-latin-400-normal', 'poppins-latin-400-normal']) {
+    const font = await fetch(`${f.base}/fonts/${name}.woff2`);
+    assert.equal(font.status, 200);
+    assert.equal(font.headers.get('content-type'), 'font/woff2');
+    assert.equal(Buffer.from(await font.arrayBuffer()).subarray(0, 4).toString(), 'wOF2');
+  }
+  assert.equal((await fetch(`${f.base}/fonts/arquivo-inexistente.woff2`)).status, 404);
 });
 test('HTTP: duas salas, respostas simultâneas, recibo seguro e resultado único', async t => {
   const f = await fixture(t), path = `/api/rooms/${f.roomId}`;

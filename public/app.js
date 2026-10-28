@@ -1,4 +1,6 @@
 /* Cada página recebe somente a projeção autorizada pelo servidor. */
+import { animatePage, animateRoom, animateCountdown, animateSelection, animateTap, animateToast } from './motion.js';
+
 const app = document.querySelector('#app');
 const catalog = [
   { id: 'lion', name: 'Leões', label: 'Equipe 1' },
@@ -23,11 +25,13 @@ const icons = {
 const icon = (name, cls = '') => `<svg class="icon ${cls}" viewBox="0 0 26 26" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">${icons[name] || icons.crown}</svg>`;
 const logo = () => `<a class="brand" href="/" aria-label="Despertos, início"><img src="/mark.svg" width="35" height="30" alt=""><span>DESPER<span class="orange">TOS</span><small>DESAFIO BÍBLICO</small></span></a>`;
 const footer = () => '<footer><span>CONGRESSO DE JOVENS <b> / </b> DESPERTOS</span><span>FOCO <i>+</i> CONHECIMENTO <i>+</i> UNIÃO <i>=</i> VITÓRIA</span></footer>';
-function shell(content, { host = false, player = false, nav = '' } = {}) {
+function shell(content, { host = false, player = false, nav = '', motion = true } = {}) {
   app.innerHTML = `<div class="site ${host ? 'host-site' : ''} ${player ? 'player-site' : ''}"><header>${logo()}<nav>${nav || `<a href="/join" class="nav-link">Entrar no jogo</a><a href="/host" class="nav-host">${icon('crown')} Sou anfitrião</a>`}</nav></header>${content}${footer()}</div>`;
+  if (motion) animatePage();
 }
 function toast(text, good = false) {
   const el = document.querySelector('#toast'); el.textContent = text; el.className = good ? 'success' : ''; el.hidden = false;
+  animateToast(el);
   clearTimeout(toast.timer); toast.timer = setTimeout(() => { el.hidden = true; }, 6500);
 }
 async function api(path, data) {
@@ -89,7 +93,7 @@ function teamCards(s, host = false) {
 }
 function leaderboard(s, final = false) {
   const leaders = s.teams.filter(t => t.rank === 1 && t.count > 0);
-  return `<div class="leaderboard"><div class="leaderboard-title">${icon('crown')}<div><span class="eyebrow orange">${final ? 'O CONHECIMENTO NOS TROUXE ATÉ AQUI' : 'CADA ACERTO FAZ A DIFERENÇA'}</span><h1>${final ? 'Essa vitória é nossa.' : 'Classificação'}</h1></div>${!final ? '<span class="live-badge"><i></i> AO VIVO</span>' : ''}</div>${final ? `<div class="winner-line">${leaders.length > 1 ? 'Vitória compartilhada' : 'Equipe vencedora'}: <strong>${leaders.map(t => esc(t.name)).join(' + ') || 'Sem participantes'}</strong></div>` : ''}<div class="ranking-list">${s.teams.map(t => `<article class="ranking-row team-${t.id} ${s.me?.team === t.id ? 'my-team' : ''}"><strong class="rank-number">${t.rank}<small>º</small></strong>${icon(t.id)}<div class="ranking-info"><div><strong>${esc(t.name)} ${s.me?.team === t.id ? '<span class="you-tag">SUA EQUIPE</span>' : ''}</strong><span><b>${t.score.toLocaleString('pt-BR')}</b> pts</span></div><div class="score-track"><span data-width="${s.teams[0].score ? Math.round(t.score / s.teams[0].score * 100) : 0}"></span></div><small>${t.correct} acertos · ${t.count} participantes</small></div></article>`).join('')}</div><p class="form-note">Pontos por equipe. Em caso de empate: mais acertos; persistindo, a posição é compartilhada.</p></div>`;
+  return `<div class="leaderboard"><div class="leaderboard-title">${icon('crown')}<div><span class="eyebrow orange">${final ? 'O CONHECIMENTO NOS TROUXE ATÉ AQUI' : 'CADA ACERTO FAZ A DIFERENÇA'}</span><h1>${final ? 'Essa vitória é nossa.' : 'Classificação'}</h1></div>${!final ? '<span class="live-badge"><i></i> AO VIVO</span>' : ''}</div>${final ? `<div class="winner-line">${leaders.length > 1 ? 'Vitória compartilhada' : 'Equipe vencedora'}: <strong>${leaders.map(t => esc(t.name)).join(' + ') || 'Sem participantes'}</strong></div>` : ''}<div class="ranking-list">${s.teams.map(t => `<article data-team-id="${t.id}" class="ranking-row team-${t.id} ${s.me?.team === t.id ? 'my-team' : ''}"><strong class="rank-number">${t.rank}<small>º</small></strong>${icon(t.id)}<div class="ranking-info"><div><strong>${esc(t.name)} ${s.me?.team === t.id ? '<span class="you-tag">SUA EQUIPE</span>' : ''}</strong><span><b>${t.score.toLocaleString('pt-BR')}</b> pts</span></div><div class="score-track"><span data-width="${s.teams[0].score ? Math.round(t.score / s.teams[0].score * 100) : 0}"></span></div><small>${t.correct} acertos · ${t.count} participantes</small></div></article>`).join('')}</div><p class="form-note">Pontos por equipe. Em caso de empate: mais acertos; persistindo, a posição é compartilhada.</p></div>`;
 }
 function hostView(s) {
   let content = '';
@@ -106,7 +110,7 @@ function hostView(s) {
   } else if (['LEADERBOARD', 'ENDED'].includes(s.phase)) {
     content = leaderboard(s, s.phase === 'ENDED') + `<div class="ranking-controls">${s.phase === 'ENDED' ? '<a class="button primary" href="/host">Criar outra partida →</a>' : `<span>Pergunta ${s.questionNumber} de ${s.totalQuestions} concluída</span><button class="button primary" data-command="next">${s.questionNumber === s.totalQuestions ? 'Ver pódio final' : 'Próxima pergunta'} ${icon('arrow')}</button>`}</div>`;
   }
-  shell(`<main class="game-main">${top}${content}${s.phase !== 'ENDED' ? '<button id="end-game" class="end-game">Encerrar partida</button>' : ''}</main><dialog id="end-dialog"><h2>Encerrar o desafio?</h2><p>Os pontos já conquistados serão mantidos. Uma pergunta ainda aberta será descartada.</p><div><button id="cancel-end" class="button quiet">Continuar jogando</button><button id="confirm-end" class="button primary">Encerrar partida</button></div></dialog>`, { host: true, nav: '<span class="nav-note">CONHEÇA A PALAVRA. VIVA O PROPÓSITO.</span>' });
+  shell(`<main class="game-main">${top}${content}${s.phase !== 'ENDED' ? '<button id="end-game" class="end-game">Encerrar partida</button>' : ''}</main><dialog id="end-dialog"><h2>Encerrar o desafio?</h2><p>Os pontos já conquistados serão mantidos. Uma pergunta ainda aberta será descartada.</p><div><button id="cancel-end" class="button quiet">Continuar jogando</button><button id="confirm-end" class="button primary">Encerrar partida</button></div></dialog>`, { host: true, motion: false, nav: '<span class="nav-note">CONHEÇA A PALAVRA. VIVA O PROPÓSITO.</span>' });
   const address = document.querySelector('#join-address'); if (address) address.textContent = `${location.host}/join`;
   document.querySelector('#copy-pin')?.addEventListener('click', async () => {
     try { await navigator.clipboard.writeText(s.pin); toast('PIN copiado!', true); } catch { toast(`PIN: ${s.pin}`); }
@@ -134,21 +138,34 @@ function playerView(s) {
   } else if (s.phase === 'LEADERBOARD' || s.phase === 'ENDED') {
     content = `<div class="my-standing team-${team.id}">${icon(team.id)}<span>SUA EQUIPE ESTÁ EM <strong>${ownTeam.rank}º</strong></span><b>${ownTeam.score} pts</b></div>${leaderboard(s, s.phase === 'ENDED')}${s.phase === 'ENDED' ? '<a href="/join" class="button primary full">Entrar em outro desafio →</a>' : '<p class="player-await">Aguarde o anfitrião para a próxima pergunta.</p>'}`;
   }
-  shell(`<main class="player-main">${top}${content}</main>`, { player: true, nav: '<span class="player-tag">SEU CONTROLE</span>' });
+  shell(`<main class="player-main">${top}${content}</main>`, { player: true, motion: false, nav: '<span class="player-tag">SEU CONTROLE</span>' });
   document.querySelectorAll('[data-answer]').forEach(b => { b.onclick = () => command('answer', { optionId: b.dataset.answer, questionRunId: s.question.runId }); });
 }
 function render(s) {
   if (current && s.sequence < current.sequence) return;
+  const previous = current;
+  offset = s.serverTime - Date.now();
+  // O SSE e o recibo HTTP podem trazer a mesma versão: não remontar a tela.
+  if (current && s.sequence === current.sequence && s.version === current.version) { updateTime(); return; }
+  const sceneChanged = !previous || previous.phase !== s.phase || previous.questionNumber !== s.questionNumber || Boolean(previous.hasAnswered) !== Boolean(s.hasAnswered);
+  const focusId = document.activeElement?.id;
+  const keepDialog = previous?.phase === s.phase && document.querySelector('#end-dialog')?.open;
   current = s; offset = s.serverTime - Date.now();
   s.role === 'host' ? hostView(s) : playerView(s);
   document.querySelectorAll('[data-width]').forEach(el => { el.style.width = `${el.dataset.width}%`; });
   updateTime();
+  if (keepDialog) document.querySelector('#end-dialog')?.showModal();
+  if (focusId && previous?.phase === s.phase) document.getElementById(focusId)?.focus({ preventScroll: true });
+  animateRoom(s, { sceneChanged, previous });
 }
 function updateTime() {
   if (!current) return;
   const now = Date.now() + offset;
   const countdown = document.querySelector('#countdown');
-  if (countdown) countdown.textContent = Math.max(1, Math.ceil((current.countdownAt - now) / 1000));
+  if (countdown) {
+    const number = String(Math.max(1, Math.ceil((current.countdownAt - now) / 1000)));
+    if (countdown.textContent !== number) { countdown.textContent = number; animateCountdown(countdown); }
+  }
   if (!current.question || current.phase !== 'QUESTION_OPEN') return;
   const left = Math.max(0, current.question.deadlineAt - now), timer = document.querySelector('#timer');
   if (timer) { timer.replaceChildren(document.createTextNode(String(Math.ceil(left / 1000))), Object.assign(document.createElement('small'), { textContent: 's' })); timer.classList.toggle('urgent', left < 6000); }
@@ -162,7 +179,8 @@ async function command(action, extra = {}) {
   const candidate = { action, expectedVersion: current.version, ...extra };
   if (!pendingCommand || JSON.stringify(pendingCommand.candidate) !== JSON.stringify(candidate)) pendingCommand = { candidate, body: { ...candidate, requestId: crypto.randomUUID() } };
   const payload = pendingCommand.body;
-  document.querySelectorAll('[data-answer], [data-command], #lock, #confirm-end').forEach(b => { b.disabled = true; });
+  const controls = [...document.querySelectorAll('[data-answer], [data-command], #lock, #confirm-end')].filter(button => !button.disabled);
+  controls.forEach(button => { button.disabled = true; });
   try {
     await api(`/api/rooms/${current.roomId}/commands?view=${current.role}`, payload);
     pendingCommand = null;
@@ -171,7 +189,11 @@ async function command(action, extra = {}) {
     toast(error.message);
     if (error.status) pendingCommand = null;
     try { render(await api(`/api/rooms/${current.roomId}/snapshot?view=${current.role}`)); } catch { /* A reconexão restaura o snapshot. */ }
-  } finally { pending = false; }
+  } finally {
+    pending = false;
+    controls.forEach(button => { if (button.isConnected) button.disabled = false; });
+    updateTime();
+  }
 }
 async function roomPage(role, id) {
   shell('<main class="loading-screen"><span class="waiting-pill"><i></i> CONECTANDO AO DESAFIO</span></main>');
@@ -188,6 +210,13 @@ function errorPage(message, role) {
   shell(`<main class="error-screen">${icon('lock')}<h1>Vamos reconectar?</h1><p>${esc(message)}</p><a class="button primary" href="${role === 'host' ? '/host' : '/join'}">${role === 'host' ? 'Entrar como anfitrião' : 'Entrar com PIN'} ${icon('arrow')}</a></main>`);
 }
 setInterval(updateTime, 200);
+app.addEventListener('change', event => {
+  if (event.target.matches('input[name="team"]')) animateSelection(event.target.closest('.team-choice'));
+});
+app.addEventListener('pointerdown', event => {
+  const button = event.target.closest('.button, [data-answer]');
+  if (button && !button.disabled) animateTap(button);
+});
 const path = location.pathname;
 const room = path.match(/^\/(host|play)\/([a-f0-9-]{36})$/);
 if (room) roomPage(room[1] === 'host' ? 'host' : 'player', room[2]);
