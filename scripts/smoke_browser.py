@@ -1,0 +1,96 @@
+import os, subprocess, tempfile, time, urllib.request, shutil
+from pathlib import Path
+from playwright.sync_api import sync_playwright
+
+folder = tempfile.mkdtemp(prefix='despertos-browser-')
+server = subprocess.Popen(['node', 'src/server.mjs'], cwd=Path(__file__).resolve().parents[1], env={**os.environ, 'DB_PATH': folder + '/game.sqlite', 'PORT': '3001', 'HOST': '127.0.0.1'}, stdout=subprocess.DEVNULL)
+try:
+    for _ in range(60):
+        try:
+            urllib.request.urlopen('http://127.0.0.1:3001/api/health', timeout=1)
+            break
+        except OSError: time.sleep(.1)
+    with sync_playwright() as p:
+        browser = p.chromium.launch(executable_path='/usr/bin/chromium', headless=True)
+        errors=[]
+        host_context = browser.new_context(viewport={'width':1440,'height':1100})
+        host = host_context.new_page()
+        host.on('pageerror', lambda e: errors.append(str(e)))
+        host.goto('http://127.0.0.1:3001/')
+        host.screenshot(path='/tmp/despertos-home.png', full_page=True)
+        assert host.locator('h1').inner_text() == 'DESPERTOS'
+        mobile=browser.new_context(viewport={'width':390,'height':844},is_mobile=True).new_page()
+        mobile.goto('http://127.0.0.1:3001/')
+        mobile.screenshot(path='/tmp/despertos-mobile-home.png',full_page=True)
+        mark=mobile.locator('.hero-wordmark').bounding_box()
+        assert mark['x'] >= 0 and mark['x'] + mark['width'] <= 390, 'Marca cortada no celular'
+        for width in [320, 768, 1024, 1440]:
+            mobile.set_viewport_size({'width':width,'height':900})
+            mark=mobile.locator('.hero-wordmark').bounding_box()
+            assert mark['x'] >= 0 and mark['x'] + mark['width'] <= width, f'Marca cortada em {width}px'
+        mobile.close()
+        host.goto('http://127.0.0.1:3001/host')
+        host.get_by_role('button', name='Criar conta', exact=True).click()
+        host.get_by_label('NOME DO ANFITRIÃO').fill('teste_visual')
+        host.get_by_label('SENHA', exact=True).fill('senha-local-de-teste')
+        host.get_by_role('button', name='Criar minha conta').click()
+        host.get_by_role('button', name='Criar partida').click()
+        host.wait_for_url('**/host/*')
+        host.locator('.pin-card strong').wait_for()
+        pin=host.locator('.pin-card strong').inner_text().replace(' ','')
+        room_url=host.url
+        players=[]
+        for name, team in [('Ana','Leões'),('Bia','Lobos')]:
+            context = browser.new_context(viewport={'width':390,'height':844}, is_mobile=True, has_touch=True)
+            page=context.new_page()
+            page.on('pageerror', lambda e: errors.append(str(e)))
+            page.goto('http://127.0.0.1:3001/join')
+            page.get_by_label('PIN DO JOGO', exact=True).fill(pin)
+            page.get_by_label('COMO VOCÊ QUER SER CHAMADO?').fill(name)
+            page.locator('.team-choice').filter(has_text=team).click()
+            page.get_by_role('button', name='Entrar no desafio').click()
+            page.wait_for_url('**/play/*')
+            page.get_by_role('heading',name=team,exact=True).wait_for()
+            players.append(page)
+        host.get_by_text('2',exact=True).first.wait_for() if False else None
+        host.wait_for_timeout(200)
+        host.screenshot(path='/tmp/despertos-host-lobby.png',full_page=True)
+        assert host.locator('.lobby-bar').inner_text().startswith('2')
+        host.get_by_role('button',name='Iniciar desafio').click()
+        host.get_by_role('heading',name='Quem construiu a arca?').wait_for(timeout=8000)
+        ana,bia=players
+        ana.get_by_role('heading',name='Quem construiu a arca?').wait_for()
+        ana.screenshot(path='/tmp/despertos-player-question.png',full_page=True)
+        host.screenshot(path='/tmp/despertos-host-question.png',full_page=True)
+        assert ana.locator('[data-command]').count()==0
+        assert ana.locator('.pin-card').count()==0
+        ana.locator('[data-answer="A"]').click()
+        ana.get_by_role('heading',name='Resposta enviada!').wait_for()
+        host.wait_for_function("document.querySelector('.progress-line b')?.textContent === '1'")
+        bia.locator('[data-answer="B"]').click()
+        ana.get_by_role('heading',name='Boa, você acertou!').wait_for()
+        bia.get_by_role('heading',name='Na próxima, a gente acerta.').wait_for()
+        ana.reload()
+        ana.get_by_role('heading',name='Boa, você acertou!').wait_for()
+        host.get_by_role('button',name='Ver classificação').click()
+        host.get_by_role('heading',name='Classificação',exact=True).wait_for()
+        assert '100' in host.locator('.ranking-row').first.inner_text()
+        ana.get_by_role('heading',name='Classificação',exact=True).wait_for()
+        ana.screenshot(path='/tmp/despertos-player-ranking.png',full_page=True)
+        host.get_by_role('button',name='Encerrar partida',exact=True).click()
+        host.get_by_role('dialog').get_by_role('button',name='Encerrar partida',exact=True).click()
+        host.get_by_role('heading',name='Essa vitória é nossa.').wait_for()
+        ana.get_by_role('heading',name='Essa vitória é nossa.').wait_for()
+        unauthorized=browser.new_context().new_page()
+        unauthorized.goto(room_url)
+        unauthorized.get_by_role('heading',name='Vamos reconectar?').wait_for()
+        for page in [host,*players]:
+            assert page.evaluate('document.documentElement.scrollWidth <= innerWidth'), 'Overflow horizontal'
+        assert not errors, errors
+        print('PASS: início, cadastro, lobby, dois celulares, sincronização, respostas, resultado, retomada, ranking, encerramento e acesso sem sessão.')
+        print('PASS: sem erros JavaScript ou overflow nas telas verificadas.')
+        browser.close()
+finally:
+    server.terminate()
+    server.wait(timeout=10)
+    shutil.rmtree(folder)

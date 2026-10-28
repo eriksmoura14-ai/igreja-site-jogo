@@ -1,0 +1,73 @@
+// Banco versionado do Desafio Bíblico. O gabarito permanece no servidor.
+export const quizVersion = 'despertos-1';
+const easy = [
+  ['Quem construiu a arca?', ['Noé', 'Moisés', 'Abraão', 'Davi'], 0, 'Gênesis 6:13–22', 'Noé fez tudo conforme Deus lhe havia ordenado.'],
+  ['Quem enfrentou Golias com uma funda?', ['Saul', 'Davi', 'Salomão', 'Samuel'], 1, '1 Samuel 17:49–50', 'Davi venceu o filisteu com uma funda e uma pedra.'],
+  ['Em que cidade Jesus nasceu?', ['Nazaré', 'Jerusalém', 'Belém', 'Cafarnaum'], 2, 'Mateus 2:1', 'Jesus nasceu em Belém da Judeia.'],
+  ['Qual foi o primeiro milagre de Jesus relatado em João?', ['Multiplicar pães', 'Curar um cego', 'Andar sobre o mar', 'Transformar água em vinho'], 3, 'João 2:1–11', 'Em Caná, Jesus manifestou sua glória ao transformar água em vinho.'],
+  ['Quem foi lançado na cova dos leões?', ['Daniel', 'José', 'Jonas', 'Elias'], 0, 'Daniel 6:16–23', 'Deus enviou seu anjo e fechou a boca dos leões.'],
+  ['Quantos apóstolos Jesus escolheu?', ['Sete', 'Doze', 'Dez', 'Quarenta'], 1, 'Lucas 6:13', 'Jesus escolheu doze e lhes deu o nome de apóstolos.'],
+  ['Quem recebeu os Dez Mandamentos no monte Sinai?', ['Josué', 'Arão', 'Moisés', 'Gideão'], 2, 'Êxodo 31:18', 'Deus entregou a Moisés as duas tábuas do testemunho.'],
+  ['Quem foi a mãe de Jesus?', ['Marta', 'Isabel', 'Ana', 'Maria'], 3, 'Lucas 1:30–31', 'O anjo anunciou a Maria que ela daria à luz Jesus.'],
+  ['Qual é o primeiro livro da Bíblia?', ['Gênesis', 'Êxodo', 'Salmos', 'Mateus'], 0, 'Gênesis 1:1', 'No princípio, Deus criou os céus e a terra.'],
+  ['Quem foi engolido por um grande peixe?', ['Pedro', 'Jonas', 'Paulo', 'Jó'], 1, 'Jonas 1:17', 'O Senhor preparou um grande peixe para engolir Jonas.'],
+];
+const medium = [
+  ['Quem interpretou os sonhos do faraó no Egito?', ['Daniel', 'José', 'Moisés', 'Arão'], 1, 'Gênesis 41:15–32', 'José atribuiu a Deus a interpretação dos sonhos do faraó.'],
+  ['Qual discípulo negou Jesus três vezes?', ['André', 'Tomé', 'Pedro', 'Filipe'], 2, 'Lucas 22:54–62', 'Pedro lembrou-se da palavra do Senhor e chorou amargamente.'],
+  ['Quem disse: “O teu povo é o meu povo, o teu Deus é o meu Deus”?', ['Ester', 'Sara', 'Débora', 'Rute'], 3, 'Rute 1:16', 'Rute decidiu acompanhar Noemi e permanecer com ela.'],
+  ['Qual profeta enfrentou os profetas de Baal no monte Carmelo?', ['Elias', 'Eliseu', 'Isaías', 'Jeremias'], 0, '1 Reis 18:20–39', 'O Senhor respondeu à oração de Elias com fogo.'],
+  ['Quem batizou Jesus no rio Jordão?', ['Pedro', 'João Batista', 'Tiago', 'André'], 1, 'Mateus 3:13–17', 'Jesus foi da Galileia ao Jordão para ser batizado por João.'],
+  ['Em qual cidade os discípulos foram chamados cristãos pela primeira vez?', ['Roma', 'Éfeso', 'Antioquia', 'Corinto'], 2, 'Atos 11:26', 'Em Antioquia os discípulos receberam pela primeira vez o nome de cristãos.'],
+  ['Quem liderou a reconstrução dos muros de Jerusalém?', ['Esdras', 'Zorobabel', 'Josué', 'Neemias'], 3, 'Neemias 2:17–18', 'Neemias convocou o povo para reconstruir os muros de Jerusalém.'],
+  ['Qual rainha intercedeu por seu povo diante do rei Assuero?', ['Ester', 'Jezabel', 'Bate-Seba', 'Vasti'], 0, 'Ester 5:1–8; 7:3–4', 'Ester apresentou ao rei seu pedido pela vida de seu povo.'],
+  ['Quem pediu sabedoria a Deus para governar?', ['Saul', 'Salomão', 'Davi', 'Roboão'], 1, '1 Reis 3:5–12', 'Salomão pediu um coração capaz de discernir e julgar o povo.'],
+  ['Qual era a profissão de Mateus antes de seguir Jesus?', ['Pescador', 'Carpinteiro', 'Cobrador de impostos', 'Pastor de ovelhas'], 2, 'Mateus 9:9', 'Jesus viu Mateus na coletoria e o chamou para segui-lo.'],
+  ['Na parábola, quem ajudou o homem ferido no caminho para Jericó?', ['Um sacerdote', 'Um levita', 'Um soldado', 'Um samaritano'], 3, 'Lucas 10:30–37', 'O samaritano se compadeceu e cuidou do homem ferido.'],
+  ['Quantos dias Jesus jejuou no deserto?', ['Quarenta', 'Sete', 'Doze', 'Três'], 0, 'Mateus 4:1–2', 'Jesus jejuou quarenta dias e quarenta noites.'],
+  ['Qual discípulo quis ver as marcas dos cravos para crer?', ['Filipe', 'Tomé', 'João', 'André'], 1, 'João 20:24–29', 'Jesus convidou Tomé a crer e ele respondeu: Senhor meu e Deus meu.'],
+  ['Quem era o irmão de Moisés que o acompanhou diante do faraó?', ['Josué', 'Calebe', 'Arão', 'Levi'], 2, 'Êxodo 7:1–2', 'Arão deveria transmitir ao faraó aquilo que Deus ordenasse a Moisés.'],
+  ['Qual mulher julgava Israel e se sentava debaixo de uma palmeira?', ['Miriã', 'Abigail', 'Hulda', 'Débora'], 3, 'Juízes 4:4–5', 'Débora era profetisa e julgava Israel naquele tempo.'],
+  ['Quem sucedeu Moisés na liderança de Israel?', ['Josué', 'Gideão', 'Samuel', 'Saul'], 0, 'Josué 1:1–9', 'Deus chamou Josué para conduzir o povo e lhe disse que fosse forte e corajoso.'],
+  ['Qual salmo começa com “O Senhor é o meu pastor”?', ['Salmo 1', 'Salmo 23', 'Salmo 91', 'Salmo 119'], 1, 'Salmos 23:1', 'O salmista confia no cuidado do Senhor como seu pastor.'],
+  ['Qual cidade teve suas muralhas derrubadas após o povo rodeá-la?', ['Nínive', 'Babilônia', 'Jericó', 'Damasco'], 2, 'Josué 6:20', 'Ao som das trombetas e do grito do povo, as muralhas caíram.'],
+  ['Quem foi ressuscitado por Jesus após quatro dias no túmulo?', ['Estêvão', 'Jairo', 'Barnabé', 'Lázaro'], 3, 'João 11:17–44', 'Jesus chamou Lázaro para fora do túmulo.'],
+  ['Que nome recebeu Saulo na narrativa de Atos 13:9?', ['Paulo', 'Pedro', 'Silas', 'Marcos'], 0, 'Atos 13:9', 'O texto identifica Saulo como também chamado Paulo.'],
+  ['Em qual livro está o relato de Pentecostes e das línguas de fogo?', ['Romanos', 'Atos', 'Hebreus', 'Apocalipse'], 1, 'Atos 2:1–4', 'Os discípulos ficaram cheios do Espírito Santo no dia de Pentecostes.'],
+  ['Quantos pães havia na multiplicação que alimentou cerca de cinco mil homens?', ['Três', 'Sete', 'Cinco', 'Doze'], 2, 'Mateus 14:17–21', 'Os discípulos tinham cinco pães e dois peixes.'],
+  ['Quem era a irmã de Marta e de Lázaro?', ['Salomé', 'Joana', 'Priscila', 'Maria'], 3, 'João 11:1–5', 'Jesus amava Marta, sua irmã Maria e Lázaro.'],
+  ['Quem foi escolhido para substituir Judas entre os apóstolos?', ['Matias', 'Barnabé', 'Silas', 'Timóteo'], 0, 'Atos 1:23–26', 'Matias foi contado com os onze apóstolos.'],
+  ['Qual é o fruto do Espírito citado primeiro em Gálatas 5:22?', ['Alegria', 'Amor', 'Paciência', 'Paz'], 1, 'Gálatas 5:22–23', 'A lista do fruto do Espírito começa com o amor.'],
+];
+const hard = [
+  ['Qual rei de Judá encontrou o Livro da Lei durante a reforma do templo?', ['Ezequias', 'Asa', 'Josias', 'Uzias'], 2, '2 Reis 22:1–13', 'No reinado de Josias, o sacerdote Hilquias encontrou o Livro da Lei.'],
+  ['Qual profeta teve a visão do vale de ossos secos?', ['Daniel', 'Zacarias', 'Amós', 'Ezequiel'], 3, 'Ezequiel 37:1–14', 'Deus mostrou a Ezequiel um vale de ossos e prometeu dar vida a eles.'],
+  ['Quem era o sacerdote e rei de Salém que abençoou Abrão?', ['Melquisedeque', 'Abimeleque', 'Jetro', 'Eli'], 0, 'Gênesis 14:18–20', 'Melquisedeque era rei de Salém e sacerdote do Deus Altíssimo.'],
+  ['Qual profeta era boieiro e cultivador de sicômoros?', ['Oseias', 'Amós', 'Joel', 'Miqueias'], 1, 'Amós 7:14–15', 'Amós relatou que o Senhor o chamou quando cuidava do rebanho.'],
+  ['De qual tribo era o apóstolo Paulo?', ['Judá', 'Levi', 'Benjamim', 'Efraim'], 2, 'Filipenses 3:5', 'Paulo se identificou como israelita da tribo de Benjamim.'],
+  ['Qual casal explicou mais precisamente o caminho de Deus a Apolo?', ['Ananias e Safira', 'Zacarias e Isabel', 'José e Maria', 'Priscila e Áquila'], 3, 'Atos 18:24–26', 'Priscila e Áquila acolheram Apolo e o instruíram.'],
+  ['Em que ilha João recebeu a revelação descrita em Apocalipse?', ['Patmos', 'Creta', 'Malta', 'Chipre'], 0, 'Apocalipse 1:9', 'João estava em Patmos por causa da palavra de Deus e do testemunho de Jesus.'],
+  ['Quem era a mulher comerciante de púrpura convertida em Filipos?', ['Dorcas', 'Lídia', 'Febe', 'Eunice'], 1, 'Atos 16:14–15', 'O Senhor abriu o coração de Lídia para atender à mensagem de Paulo.'],
+  ['Qual profeta anunciou que o justo viverá pela sua fé?', ['Naum', 'Sofonias', 'Habacuque', 'Ageu'], 2, 'Habacuque 2:4', 'A palavra contrasta a soberba com a vida pela fé.'],
+  ['Qual servo de Eliseu foi atingido por lepra após buscar presentes de Naamã?', ['Baruque', 'Ebede-Meleque', 'Onésimo', 'Geazi'], 3, '2 Reis 5:20–27', 'Geazi buscou presentes de Naamã e depois mentiu a Eliseu.'],
+  ['Quem foi a profetisa consultada sobre o Livro da Lei no reinado de Josias?', ['Hulda', 'Débora', 'Miriã', 'Ana'], 0, '2 Reis 22:14–20', 'Os enviados do rei consultaram a profetisa Hulda em Jerusalém.'],
+  ['Qual jovem caiu de uma janela enquanto Paulo falava?', ['Trófimo', 'Êutico', 'Tíquico', 'Aristarco'], 1, 'Atos 20:7–12', 'Êutico adormeceu e caiu do terceiro andar; depois foi levado vivo.'],
+  ['Quem foi o primeiro juiz mencionado como libertador em Juízes 3?', ['Eúde', 'Sangar', 'Otniel', 'Gideão'], 2, 'Juízes 3:7–11', 'O Senhor levantou Otniel como libertador de Israel.'],
+  ['A quem Paulo escreveu uma carta a respeito de Onésimo?', ['Tito', 'Timóteo', 'Fileto', 'Filemom'], 3, 'Filemom 1:10–16', 'Paulo intercedeu por Onésimo, pedindo que fosse recebido como irmão amado.'],
+  ['Qual livro termina com uma pergunta sobre a compaixão de Deus por Nínive?', ['Jonas', 'Naum', 'Malaquias', 'Obadias'], 0, 'Jonas 4:10–11', 'Deus confrontou Jonas com sua compaixão pela grande cidade.'],
+];
+export const questions = [
+  ...easy.map(q => ['easy', 100, ...q]),
+  ...medium.map(q => ['medium', 200, ...q]),
+  ...hard.map(q => ['hard', 300, ...q]),
+].map(([difficulty, points, text, options, correct, reference, explanation], i) => ({
+  id: `q${i + 1}`, difficulty, points, text,
+  options: options.map((text, i) => ({ id: 'ABCD'[i], text })),
+  correctOptionId: 'ABCD'[correct], reference, explanation, durationMs: 30_000,
+}));
+export const teams = [
+  { id: 'lion', name: 'Leões', label: 'Equipe 1', color: '#ff8a19', symbol: '♌' },
+  { id: 'wolf', name: 'Lobos', label: 'Equipe 2', color: '#27baff', symbol: '◇' },
+  { id: 'eagle', name: 'Águias', label: 'Equipe 3', color: '#39dc87', symbol: '↗' },
+  { id: 'crown', name: 'Realeza', label: 'Equipe 4', color: '#a781ff', symbol: '♛' },
+];
