@@ -23,7 +23,7 @@ async function body(req) {
   try { const v = JSON.parse(Buffer.concat(chunks).toString()); if (!v || Array.isArray(v) || typeof v !== 'object') throw Error(); return v; }
   catch { throw new GameError(400, 'Envie um objeto JSON válido.'); }
 }
-export function createApp({ game, secureCookies = process.env.COOKIE_SECURE === '1', publicOrigin = process.env.PUBLIC_ORIGIN } = {}) {
+export function createApp({ game, secureCookies = process.env.COOKIE_SECURE === '1', publicOrigin = process.env.PUBLIC_ORIGIN || process.env.RENDER_EXTERNAL_URL } = {}) {
   const streams = new Map(), limits = new Map(); let globalStreams = 0;
   const rate = (req, group, limit) => {
     const key = `${req.socket.remoteAddress}:${group}`, now = Date.now();

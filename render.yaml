@@ -1,0 +1,25 @@
+# Deploy inicial gratuito, para demonstração. O SQLite NÃO é persistente neste plano.
+# Para um evento com dados duráveis, siga a seção Render do README antes de publicar.
+services:
+  - type: web
+    name: despertos-jogo
+    runtime: node
+    repo: https://github.com/eriksmoura14-ai/igreja-site-jogo
+    branch: main
+    plan: free
+    numInstances: 1
+    buildCommand: npm ci --ignore-scripts --no-audit --no-fund && npm run check && npm test
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: false
+    envVars:
+      - key: NODE_VERSION
+        value: 24.19.0
+      - key: NODE_ENV
+        value: production
+      - key: HOST
+        value: 0.0.0.0
+      - key: COOKIE_SECURE
+        value: '1'
+      - key: DB_PATH
+        value: .data/despertos.sqlite

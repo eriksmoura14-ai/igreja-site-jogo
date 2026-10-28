@@ -4,10 +4,10 @@ import { randomUUID } from 'node:crypto';
 import { Game } from '../src/game.mjs';
 import { createApp } from '../src/server.mjs';
 
-async function fixture(t) {
+async function fixture(t, options = {}) {
   let now = 100000;
   const game = new Game(':memory:', { now: () => now });
-  const server = createApp({ game });
+  const server = createApp({ game, ...options });
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const base = `http://127.0.0.1:${server.address().port}`;
   t.after(async () => { server.stopStreams(); server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); game.close(); });
@@ -91,4 +91,30 @@ test('HTTP: validação de payload, limite de tamanho e ingresso sem autenticaç
   assert.equal((await f.request('/api/join', { name: 'a'.repeat(9000) })).res.status, 413);
   const response = await fetch(`${f.base}/api/join`, { method: 'POST', body: '{}' }); assert.equal(response.status, 415);
   assert.deepEqual((await f.request('/api/health')).value, { status: 'ok' });
+});
+
+test('Render: origem HTTPS automática atrás do proxy, cookies Secure e proteção de origem', async t => {
+  const before = process.env.RENDER_EXTERNAL_URL;
+  let f;
+  try {
+    process.env.RENDER_EXTERNAL_URL = 'https://despertos-teste.onrender.com';
+    f = await fixture(t, { secureCookies: true });
+  } finally {
+    if (before === undefined) delete process.env.RENDER_EXTERNAL_URL;
+    else process.env.RENDER_EXTERNAL_URL = before;
+  }
+  const credentials = { username: 'anfitriao', password: 'senha-de-teste-123' };
+  const login = await f.request('/api/auth/login', credentials, undefined, { Origin: 'https://despertos-teste.onrender.com', Host: 'upstream.internal' });
+  assert.equal(login.res.status, 200);
+  assert.match(login.res.headers.get('set-cookie'), /; Secure/);
+  assert.equal((await f.request('/api/rooms', {}, login.cookie, { Origin: 'https://despertos-teste.onrender.com', Host: 'upstream.internal' })).res.status, 201);
+  assert.equal((await f.request('/api/rooms', {}, login.cookie, { Origin: 'https://outro.onrender.com' })).res.status, 403);
+});
+
+test('PUBLIC_ORIGIN explícita tem prioridade sobre o domínio automático do Render', async t => {
+  const f = await fixture(t, { secureCookies: true, publicOrigin: 'https://jogo.exemplo.com' });
+  const credentials = { username: 'anfitriao', password: 'senha-de-teste-123' };
+  const login = await f.request('/api/auth/login', credentials, undefined, { Origin: 'https://jogo.exemplo.com' });
+  assert.equal(login.res.status, 200);
+  assert.equal((await f.request('/api/auth/login', credentials, undefined, { Origin: 'https://despertos-teste.onrender.com' })).res.status, 403);
 });

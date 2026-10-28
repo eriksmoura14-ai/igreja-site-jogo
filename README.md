@@ -2,6 +2,46 @@
 
 Jogo bíblico multiplayer ao vivo, inspirado na experiência de anfitrião e participantes do Kahoot. Uma partida tem um servidor autoritativo e duas interfaces distintas: painel do anfitrião e controle do participante no celular.
 
+**Quer abrir o site sem instalar nada?** Use o deploy preparado no Render:
+
+[![Deploy no Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/eriksmoura14-ai/igreja-site-jogo)
+
+O botão abre a criação do serviço na sua conta Render. Ele não é o endereço do jogo já publicado. O Blueprint usa o plano gratuito de demonstração, sem disco persistente; contas e partidas podem ser perdidas ao reiniciar ou publicar uma nova versão. Confira o plano e os valores exibidos pelo Render antes de confirmar qualquer contratação.
+
+## Publicar no Render
+
+1. Abra **[Deploy no Render](https://render.com/deploy?repo=https://github.com/eriksmoura14-ai/igreja-site-jogo)** e faça login, preferencialmente com a conta GitHub que tem acesso ao repositório.
+2. Autorize o acesso do Render a `eriksmoura14-ai/igreja-site-jogo`, se solicitado. Se o botão não importar um repositório privado, use **New → Blueprint**, conecte o repositório, escolha a branch `main` e o arquivo `render.yaml`.
+3. Revise o serviço `despertos-jogo` e o plano **Free**. Crie/aplique o Blueprint. A configuração já instala, valida e inicia o servidor Node; não escolha **Static Site**.
+4. Aguarde o build e o deploy terminarem com sucesso. Abra o endereço HTTPS que o painel do Render realmente atribuir ao serviço. Não é necessário escolher ou adivinhar esse endereço antecipadamente.
+5. Nesse endereço, abra `/host` para criar sua conta e a partida; os celulares entram no mesmo domínio, em `/join`.
+
+O `render.yaml` configura Node 24.19.0, uma instância, `npm start`, health check em `/api/health` e cookies Secure. A origem HTTPS é obtida automaticamente de `RENDER_EXTERNAL_URL`, fornecida pelo Render. Se conectar um domínio próprio, configure `PUBLIC_ORIGIN` com essa origem exata, sem barra final (ex.: `https://jogo.suaigreja.com.br`).
+
+O deploy automático está desativado para evitar que um push interrompa uma partida. Para atualizar depois, use **Manual Deploy → Deploy latest commit** no serviço, fora do horário do jogo.
+
+### Demonstração gratuita versus dados persistentes
+
+O Blueprint gratuito serve para experimentar as telas e o multiplayer. O serviço pode ficar suspenso quando ocioso, demorar a acordar e não preserva o SQLite em reinícios/deploys. Não use essa modalidade como garantia de conservação de resultados de um evento.
+
+Para manter dados entre deploys, antes de criar o Blueprint altere o serviço para um plano de web service que aceite disco persistente (por exemplo, `starter`), adicione o bloco abaixo no mesmo nível de `envVars`, e mude `DB_PATH` para `/var/data/despertos.sqlite`:
+
+```yaml
+    plan: starter
+    disk:
+      name: despertos-data
+      mountPath: /var/data
+      sizeGB: 1
+```
+
+Essa modalidade envolve cobrança de serviço e disco; confira os valores atuais na conta Render. Não foi contratado nenhum recurso pago. O disco deve existir e estar montado antes da primeira inicialização com esse `DB_PATH`. Mudar o caminho não migra automaticamente os dados de uma demonstração anterior. Mantenha apenas uma instância e não rode o mesmo SQLite em serviços diferentes.
+
+Se o deploy falhar, confira **Logs** no serviço: o build deve executar os testes, e o início deve registrar “Despertos iniciado na porta …”. O Render define `PORT` automaticamente. Envie o texto do erro, sem senhas ou tokens, para diagnosticar. O status remoto só estará validado depois que o Render concluir o deploy e o domínio atribuído responder.
+
+### Por que Render nesta versão?
+
+O backend depende de um processo Node contínuo, de um relógio compartilhado e do SQLite local. A arquitetura atual se encaixa em um Web Service do Render. Para hospedar tudo na Vercel, seria necessário adaptar o backend e adotar armazenamento e sincronização apropriados ao modelo de execução; simplesmente importar este repositório como site estático não coloca o jogo multiplayer em funcionamento.
+
 ## Executar
 
 Requisito: **Node.js 24** (inclui `node:sqlite`). Não há dependências de produção ou serviços externos. O projeto já tem todos os arquivos necessários; não exige compilação.
@@ -62,7 +102,7 @@ O anfitrião autentica com usuário e senha (hash com scrypt). Cada participante
 | `HOST` | `0.0.0.0` | Interface de rede |
 | `DB_PATH` | `.data/despertos.sqlite` | Arquivo persistente SQLite |
 | `COOKIE_SECURE` | `0` | Defina `1` em HTTPS para cookies Secure |
-| `PUBLIC_ORIGIN` | Origem derivada da requisição | Origem pública exata, como `https://jogo.exemplo.com`, especialmente atrás de proxy |
+| `PUBLIC_ORIGIN` | `RENDER_EXTERNAL_URL` no Render; senão, origem da requisição | Origem pública exata, como `https://jogo.exemplo.com`, especialmente atrás de proxy |
 
 Não coloque senhas, sessões ou o banco de dados no Git. `.data/` está ignorado. Não há credenciais externas obrigatórias. Contas são criadas pela interface, e a inscrição de novos anfitriões é aberta.
 
