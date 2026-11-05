@@ -4,6 +4,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { scrypt, randomBytes, timingSafeEqual } from 'node:crypto';
+import QRCode from 'qrcode';
 import { Game, GameError } from './game.mjs';
 
 const derive = promisify(scrypt);
@@ -104,13 +105,23 @@ export function createApp({ game, secureCookies = process.env.COOKIE_SECURE === 
       if (url.pathname === '/api/player/leave' && req.method === 'POST') {
         res.setHeader('Set-Cookie', cookie(PLAYER_COOKIE, '', secureCookies, 0)); return json(res, 200, { ok: true });
       }
-      const match = url.pathname.match(/^\/api\/rooms\/([a-f0-9-]{36})\/(snapshot|events|commands)$/);
+      const match = url.pathname.match(/^\/api\/rooms\/([a-f0-9-]{36})\/(snapshot|events|commands|qr)$/);
       if (match) {
         const [, roomId, route] = match;
         game.tick().forEach(publish);
         const role = url.searchParams.get('view');
         const actor = actorFor(req, roomId, role);
         const snapshot = game.snapshot(roomId, actor);
+        if (route === 'qr') {
+          if (req.method !== 'GET') throw new GameError(405, 'Método não permitido.');
+          if (actor.role !== 'host') throw new GameError(403, 'Somente o anfitrião pode gerar o convite.');
+          if (snapshot.phase !== 'LOBBY') throw new GameError(409, 'Os convites estão disponíveis no lobby.');
+          const joinUrl = new URL('/join', publicOrigin || `${secureCookies ? 'https' : 'http'}://${req.headers.host}`);
+          joinUrl.searchParams.set('pin', snapshot.pin);
+          const svg = await QRCode.toString(joinUrl.href, { type: 'svg', errorCorrectionLevel: 'M', margin: 4, width: 256 });
+          res.writeHead(200, { 'Content-Type': 'image/svg+xml; charset=utf-8' });
+          return res.end(svg);
+        }
         if (route === 'snapshot' && req.method === 'GET') return json(res, 200, snapshot);
         if (route === 'events' && req.method === 'GET') {
           rate(req, 'stream', 60);

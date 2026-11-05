@@ -3,11 +3,16 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=24.0.0" },
+  "engines": {
+    "node": ">=24.0.0"
+  },
   "scripts": {
     "start": "node src/server.mjs",
     "dev": "node --watch src/server.mjs",
     "test": "node --test test/*.test.mjs",
     "check": "node scripts/check.mjs"
+  },
+  "dependencies": {
+    "qrcode": "1.5.4"
   }
 }

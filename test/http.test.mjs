@@ -130,3 +130,42 @@ test('PUBLIC_ORIGIN explícita tem prioridade sobre o domínio automático do Re
   assert.equal(login.res.status, 200);
   assert.equal((await f.request('/api/auth/login', credentials, undefined, { Origin: 'https://despertos-teste.onrender.com' })).res.status, 403);
 });
+
+test('QR: convite em SVG por sala, restrito ao anfitrião proprietário e sem cache', async t => {
+  const f = await fixture(t);
+  const path = `/api/rooms/${f.roomId}/qr`;
+  const getQr = (route = path, cookie = f.host, view = 'host') => fetch(`${f.base}${route}?view=${view}`, { headers: cookie ? { Cookie: cookie } : {} });
+  assert.equal((await getQr(path, null)).status, 401);
+  assert.equal((await getQr(path, f.a)).status, 401);
+  assert.equal((await getQr(path, f.a, 'player')).status, 403);
+  const stranger = await f.request('/api/auth/register', { username: 'outro_anfitriao', password: 'senha-de-teste-456' });
+  assert.equal((await getQr(path, stranger.cookie)).status, 403);
+
+  const image = await getQr();
+  assert.equal(image.status, 200);
+  assert.match(image.headers.get('content-type'), /^image\/svg\+xml/);
+  assert.equal(image.headers.get('cache-control'), 'no-store');
+  const svg = await image.text();
+  assert.match(svg, /<svg\b/);
+  assert.match(svg, /viewBox=/);
+  assert.equal(svg.includes(f.host.split('=')[1]), false);
+  assert.equal(await (await getQr()).text(), svg);
+
+  const other = await f.request('/api/rooms', {}, f.host);
+  const secondImage = await getQr(`/api/rooms/${other.value.roomId}/qr`);
+  assert.equal(secondImage.status, 200);
+  assert.notEqual(await secondImage.text(), svg);
+  const state = await f.request(`/api/rooms/${f.roomId}/snapshot?view=host`, undefined, f.host);
+  assert.equal((await fetch(`${f.base}/join?pin=${state.value.pin}`)).status, 200);
+});
+
+test('QR: iniciar ou encerrar a partida invalida a geração do convite', async t => {
+  const f = await fixture(t);
+  const path = `/api/rooms/${f.roomId}/qr?view=host`;
+  const headers = { Cookie: f.host };
+  assert.equal((await fetch(f.base + path, { headers })).status, 200);
+  await f.command('start');
+  assert.equal((await fetch(f.base + path, { headers })).status, 409);
+  await f.command('end');
+  assert.equal((await fetch(f.base + path, { headers })).status, 409);
+});

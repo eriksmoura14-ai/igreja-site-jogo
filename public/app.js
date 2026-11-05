@@ -44,6 +44,11 @@ function joinForm() {
   return `<form id="join-form"><label for="pin">PIN DO JOGO</label><input id="pin" name="pin" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" minlength="6" placeholder="000 000" required autocomplete="off"><label for="nickname">COMO VOCÊ QUER SER CHAMADO?</label><input id="nickname" name="name" placeholder="Seu nome ou apelido" minlength="2" maxlength="24" required autocomplete="nickname"><fieldset><legend>ESCOLHA SUA EQUIPE <span>ATÉ 4 POR EQUIPE</span></legend><div class="team-grid">${catalog.map(t => `<label class="team-choice team-${t.id}"><input type="radio" name="team" value="${t.id}" required>${icon(t.id)}<strong>${t.name}</strong><span>${t.label}</span></label>`).join('')}</div></fieldset><button class="button primary full" type="submit">Entrar no desafio ${icon('arrow')}</button><p class="form-note">O PIN aparece na tela do anfitrião.</p></form>`;
 }
 function bindJoin() {
+  const pin = new URLSearchParams(location.search).get('pin');
+  if (/^\d{6}$/.test(pin || '')) {
+    document.querySelector('#pin').value = pin;
+    document.querySelector('#join-form .form-note').textContent = 'PIN da sala preenchido. Informe seu nome e escolha sua equipe.';
+  }
   document.querySelector('#join-form').addEventListener('submit', async e => {
     e.preventDefault(); const button = e.target.querySelector('button'); button.disabled = true;
     const data = Object.fromEntries(new FormData(e.target));
@@ -99,7 +104,9 @@ function hostView(s) {
   let content = '';
   const top = `<div class="game-top"><a href="/host" class="back-link">← Minhas partidas</a><span class="host-tag">${icon('crown')} PAINEL DO ANFITRIÃO</span><span class="connection" id="connection">Conectado</span></div>`;
   if (s.phase === 'LOBBY') {
-    content = `<div class="lobby-heading"><div><span class="eyebrow orange">O PRÓXIMO PASSO É JUNTOS.</span><h1>Reúna sua equipe.</h1><p>Entre no endereço abaixo, digite o PIN e escolha seu time.</p><div class="join-address" id="join-address"></div></div><div class="pin-card"><span>PIN DO JOGO</span><strong>${esc(s.pin.slice(0, 3))} ${esc(s.pin.slice(3))}</strong><button id="copy-pin">Copiar PIN ${icon('phone')}</button></div></div><div class="lobby-bar"><h2>${s.players.length}<span> / 16 participantes</span></h2><button id="lock" class="button quiet">${icon('lock')} ${s.locked ? 'Liberar entradas' : 'Bloquear entradas'}</button></div>${teamCards(s, true)}<div class="host-controls"><p>${icon('people')} Até 4 integrantes por equipe. Todos respondem no próprio celular.</p><button data-command="start" class="button primary" ${s.players.length ? '' : 'disabled'}>Iniciar desafio ${icon('arrow')}</button></div><div class="rules-inline"><span>50 PERGUNTAS</span><span>30 SEGUNDOS POR PERGUNTA</span><span>100 / 200 / 300 PONTOS POR ACERTO</span></div>`;
+    const joinUrl = new URL('/join', location.origin);
+    joinUrl.searchParams.set('pin', s.pin);
+    content = `<div class="lobby-heading"><div class="lobby-intro"><span class="eyebrow orange">O PRÓXIMO PASSO É JUNTOS.</span><h1>Reúna sua equipe.</h1><p>Digite o PIN ou escaneie o QR code para entrar nesta sala.</p><div class="join-address" id="join-address"></div></div><div class="room-entry-options"><section class="pin-card" aria-label="Entrar com código"><span>PIN DO JOGO</span><strong>${esc(s.pin.slice(0, 3))} ${esc(s.pin.slice(3))}</strong><p>Digite este PIN na tela de entrada.</p><button id="copy-pin">Copiar PIN ${icon('phone')}</button></section><section class="room-qr-card" aria-labelledby="qr-title"><h2 id="qr-title">OU ENTRE PELO QR CODE</h2><a id="room-invite-link" class="room-qr-link" href="${esc(joinUrl.href)}" target="_blank" rel="noopener" aria-label="Abrir entrada desta sala em outra aba"><img id="room-qr" src="/api/rooms/${esc(s.roomId)}/qr?view=host" width="256" height="256" alt="QR code para entrar nesta sala com o PIN ${esc(s.pin)}"></a><p>Abra a câmera do celular<br>e aponte para este código.</p><button id="copy-join-link">Copiar link da sala ${icon('phone')}</button></section></div></div><div class="lobby-bar"><h2>${s.players.length}<span> / 16 participantes</span></h2><button id="lock" class="button quiet">${icon('lock')} ${s.locked ? 'Liberar entradas' : 'Bloquear entradas'}</button></div>${teamCards(s, true)}<div class="host-controls"><p>${icon('people')} Até 4 integrantes por equipe. Todos respondem no próprio celular.</p><button data-command="start" class="button primary" ${s.players.length ? '' : 'disabled'}>Iniciar desafio ${icon('arrow')}</button></div><div class="rules-inline"><span>50 PERGUNTAS</span><span>30 SEGUNDOS POR PERGUNTA</span><span>100 / 200 / 300 PONTOS POR ACERTO</span></div>`;
   } else if (s.phase === 'COUNTDOWN') {
     content = `<section class="countdown-screen"><span class="eyebrow orange">PERGUNTA ${s.questionNumber} DE ${s.totalQuestions}</span><h1>Foco na Palavra.</h1><div class="countdown-number" id="countdown">3</div><p>Equipes, preparem seus celulares.</p></section>`;
   } else if (s.phase === 'QUESTION_OPEN') {
@@ -114,6 +121,10 @@ function hostView(s) {
   const address = document.querySelector('#join-address'); if (address) address.textContent = `${location.host}/join`;
   document.querySelector('#copy-pin')?.addEventListener('click', async () => {
     try { await navigator.clipboard.writeText(s.pin); toast('PIN copiado!', true); } catch { toast(`PIN: ${s.pin}`); }
+  });
+  document.querySelector('#copy-join-link')?.addEventListener('click', async () => {
+    const link = document.querySelector('#room-invite-link').href;
+    try { await navigator.clipboard.writeText(link); toast('Link da sala copiado!', true); } catch { toast(link); }
   });
   document.querySelector('#lock')?.addEventListener('click', () => command('lock', { locked: !s.locked }));
   document.querySelectorAll('[data-command]').forEach(b => { b.onclick = () => command(b.dataset.command); });

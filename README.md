@@ -44,7 +44,7 @@ O backend depende de um processo Node contínuo, de um relógio compartilhado e 
 
 ## Executar
 
-Requisito: **Node.js 24** (inclui `node:sqlite`). Não há dependências de produção ou serviços externos. O projeto já tem todos os arquivos necessários; não exige compilação.
+Requisito: **Node.js 24** (inclui `node:sqlite`). Instale as dependências pelo lockfile; `qrcode` gera os convites localmente, sem serviços externos. O projeto não exige compilação.
 
 ```sh
 npm ci --ignore-scripts --no-audit --no-fund
@@ -58,8 +58,8 @@ O servidor usa a porta `3000`. Para desenvolver com reinício automático, use `
 ## Como jogar
 
 1. Abra `/host`, crie sua conta de anfitrião e clique em **Criar partida**.
-2. Mostre o lobby e o PIN no computador ou projetor. O PIN localiza a sala; não dá acesso aos controles.
-3. Cada participante abre `/join`, informa PIN e apelido e escolhe uma equipe.
+2. Mostre o lobby no computador ou projetor. Ele exibe o PIN e um QR code próprio daquela sala, além de botões para copiar o PIN ou o link de entrada. O convite localiza a sala; não dá acesso aos controles.
+3. Cada participante abre `/join` e informa o PIN, ou escaneia o QR code para abrir `/join?pin=...` com o PIN preenchido. Depois informa o apelido e escolhe uma equipe. A entrada continua sujeita às mesmas regras de sala ativa, bloqueio e lotação.
 4. O anfitrião inicia a partida. Cada celular recebe a pergunta e quatro botões; não recebe controles administrativos.
 5. A pergunta fecha quando todos respondem, ao atingir o prazo ou por comando do anfitrião. Então aparecem a resposta correta, a explicação e a referência bíblica.
 6. O anfitrião avança ao ranking e, depois, à próxima pergunta. Após a pergunta 50, aparece a classificação final.
@@ -124,11 +124,15 @@ Execute **um processo Node** por banco SQLite em um disco local persistente. Pro
 
 Em um proxy reverso, habilite HTTPS, `COOKIE_SECURE=1`, `PUBLIC_ORIGIN` com a origem pública, conexões SSE longas e buffering desabilitado para `/api/rooms/*/events`. Os heartbeats são enviados a cada 15 segundos. Não use hospedagem de arquivos estáticos, GitHub Pages ou múltiplas réplicas para esta versão. Publicar os arquivos no GitHub não hospeda o servidor do jogo.
 
-Esta versão não inclui recuperação de senha, editor de quizzes, convite por QR, transferência de identidade do participante entre dispositivos ou garantia de escala. Os limites atuais incluem cinco salas ativas por anfitrião, 500 salas retidas e 1.000 streams globais; não são uma capacidade comprovada por teste de carga. Limites de tentativas são locais ao processo e agrupados pelo IP visto pelo servidor, inclusive atrás de proxies. Ajuste-os à topologia antes de ampliar o uso.
+Esta versão não inclui recuperação de senha, editor de quizzes, transferência de identidade do participante entre dispositivos ou garantia de escala. Os limites atuais incluem cinco salas ativas por anfitrião, 500 salas retidas e 1.000 streams globais; não são uma capacidade comprovada por teste de carga. Limites de tentativas são locais ao processo e agrupados pelo IP visto pelo servidor, inclusive atrás de proxies. Ajuste-os à topologia antes de ampliar o uso.
 
 ## Validação
 
 `npm test` usa bancos temporários e não altera partidas reais. Verifica uma partida completa com as 50 perguntas, pontos por dificuldade, empates, reconexão, reinício durante a contagem/pergunta, PIN único, timeout exato, duplicidade, isolamento entre salas, autorização, CSRF, proteção dos arquivos e eventos SSE sem vazamento de gabarito.
+
+O QR code é gerado em SVG em `/api/rooms/:roomId/qr?view=host`, somente para o anfitrião proprietário enquanto a sala está no lobby. Ele contém apenas a URL pública de ingresso com o PIN, nunca uma sessão administrativa. O endereço usa `PUBLIC_ORIGIN`, a origem Render ou a origem local configurada. Nenhum serviço de terceiros recebe os dados do convite.
+
+O teste opcional `python3 scripts/smoke_qr.py` requer Playwright Python, Chromium em `/usr/bin/chromium`, Pillow e `zxing-cpp`. Ele lê o QR realmente renderizado, verifica duas salas diferentes, ingresso por QR e por PIN, preenchimento com zero inicial e layout entre 320 e 1440 pixels. Por padrão inicia um servidor local com banco temporário; `SMOKE_BASE_URL=https://seu-dominio` permite validar um deploy. Nesse modo cria uma conta de teste e duas salas, encerrando as salas ao terminar. As capturas ficam em `/tmp/despertos-qr-.../`.
 
 No ambiente gerenciado, se o terminal negar abertura de portas (`listen EPERM`) ou impedir conexão com o proxy, execute os testes e os comandos de rede com a permissão de rede do executor. Não remova o proxy nem desabilite TLS.
 
