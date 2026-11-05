@@ -97,7 +97,7 @@ export function createApp({ game, secureCookies = process.env.COOKIE_SECURE === 
       }
       if (url.pathname === '/api/join' && req.method === 'POST') {
         rate(req, 'join', 30);
-        const input = await body(req), joined = game.join(input.pin, input.name, input.team);
+        const input = await body(req), joined = game.join(input.pin, input.name, input.team, input.avatar);
         res.setHeader('Set-Cookie', cookie(PLAYER_COOKIE, joined.token, secureCookies));
         publish(joined.roomId);
         return json(res, 201, { roomId: joined.roomId, playerId: joined.playerId });
@@ -149,8 +149,8 @@ export function createApp({ game, secureCookies = process.env.COOKIE_SECURE === 
       }
       if (url.pathname.startsWith('/api/')) throw new GameError(404, 'Rota não encontrada.');
       if (req.method !== 'GET') throw new GameError(405, 'Método não permitido.');
-      const files = { '/app.js': ['app.js', 'text/javascript'], '/motion.js': ['motion.js', 'text/javascript'], '/styles.css': ['styles.css', 'text/css'], '/type-motion.css': ['type-motion.css', 'text/css'], '/mark.svg': ['mark.svg', 'image/svg+xml'], '/brand/despertos-wordmark.ffe9732aa666.png': ['brand/despertos-wordmark.ffe9732aa666.png', 'image/png'] };
-      for (const name of ['anton-latin-400-normal', 'montserrat-latin-700-normal', 'bebas-neue-latin-400-normal', 'poppins-latin-400-normal', 'poppins-latin-400-italic', 'poppins-latin-500-normal', 'poppins-latin-600-normal', 'poppins-latin-700-normal', 'poppins-latin-800-normal']) {
+      const files = { '/app.js': ['app.js', 'text/javascript'], '/motion.js': ['motion.js', 'text/javascript'], '/avatars.js': ['../shared/avatars.mjs', 'text/javascript'], '/arcade.js': ['arcade.js', 'text/javascript'], '/arcade.css': ['arcade.css', 'text/css'], '/styles.css': ['styles.css', 'text/css'], '/type-motion.css': ['type-motion.css', 'text/css'], '/mark.svg': ['mark.svg', 'image/svg+xml'], '/brand/despertos-wordmark.ffe9732aa666.png': ['brand/despertos-wordmark.ffe9732aa666.png', 'image/png'] };
+      for (const name of ['press-start-2p-latin-400-normal', 'anton-latin-400-normal', 'montserrat-latin-700-normal', 'bebas-neue-latin-400-normal', 'poppins-latin-400-normal', 'poppins-latin-400-italic', 'poppins-latin-500-normal', 'poppins-latin-600-normal', 'poppins-latin-700-normal', 'poppins-latin-800-normal']) {
         files[`/fonts/${name}.woff2`] = [`fonts/${name}.woff2`, 'font/woff2'];
       }
       let asset = files[url.pathname];

@@ -39,13 +39,13 @@ test('HTTP: autorização, login, cookies HttpOnly, CSRF e assets sem gabarito',
   const login = await f.request('/api/auth/login', { username: 'anfitriao', password: 'senha-de-teste-123' });
   assert.equal(login.res.status, 200); assert.match(login.res.headers.get('set-cookie'), /HttpOnly; SameSite=Strict/);
   assert.equal((await f.request('/api/rooms', {}, f.a)).res.status, 401);
-  for (const path of ['/', '/join', '/host', `/host/${f.roomId}`, `/play/${f.roomId}`, '/app.js', '/motion.js', '/styles.css', '/type-motion.css']) {
+  for (const path of ['/', '/join', '/host', `/host/${f.roomId}`, `/play/${f.roomId}`, '/app.js', '/arcade.js', '/avatars.js', '/motion.js', '/styles.css', '/type-motion.css', '/arcade.css']) {
     const response = await fetch(`${f.base}${path}`);
     assert.equal(response.status, 200); assert.ok(response.headers.get('content-security-policy'));
     assert.equal((await response.text()).includes('Quem construiu a arca?'), false);
   }
   for (const path of ['/src/questions.mjs', '/.data/despertos.sqlite', '/.git/config', '/package.json']) assert.equal((await fetch(`${f.base}${path}`)).status, 404);
-  for (const name of ['anton-latin-400-normal', 'montserrat-latin-700-normal', 'bebas-neue-latin-400-normal', 'poppins-latin-400-normal']) {
+  for (const name of ['press-start-2p-latin-400-normal', 'anton-latin-400-normal', 'montserrat-latin-700-normal', 'bebas-neue-latin-400-normal', 'poppins-latin-400-normal']) {
     const font = await fetch(`${f.base}/fonts/${name}.woff2`);
     assert.equal(font.status, 200);
     assert.equal(font.headers.get('content-type'), 'font/woff2');
@@ -168,4 +168,20 @@ test('QR: iniciar ou encerrar a partida invalida a geração do convite', async 
   assert.equal((await fetch(f.base + path, { headers })).status, 409);
   await f.command('end');
   assert.equal((await fetch(f.base + path, { headers })).status, 409);
+});
+
+test('HTTP: avatar personalizado passa pela validação e não permite alterar a pontuação como jogador', async t => {
+  const f = await fixture(t);
+  const lobby = await f.request(`/api/rooms/${f.roomId}/snapshot?view=host`, undefined, f.host);
+  const avatar = { color: 'teal', skin: 'deep', face: 'wink', accessory: 'cap' };
+  const joined = await f.request('/api/join', { pin: lobby.value.pin, name: 'Avatar novo', team: 'eagle', avatar });
+  assert.equal(joined.res.status, 201);
+  const view = await f.request(`/api/rooms/${f.roomId}/snapshot?view=player`, undefined, joined.cookie);
+  assert.deepEqual(view.value.me.avatar, avatar);
+  assert.equal(view.value.players, undefined);
+  assert.equal((await f.request('/api/join', { pin: lobby.value.pin, name: 'Avatar ruim', team: 'eagle', avatar: { ...avatar, accessory: '<script>' } })).res.status, 400);
+  const changed = await f.command('settings', { scoringMode: 'speed' });
+  assert.equal(changed.res.status, 200);
+  assert.equal((await f.command('settings', { scoringMode: 'fixed' }, joined.cookie, 'player')).res.status, 403);
+  assert.equal((await f.request(`/api/rooms/${f.roomId}/snapshot?view=player`, undefined, joined.cookie)).value.scoringMode, 'speed');
 });

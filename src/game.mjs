@@ -1,6 +1,7 @@
 import { DatabaseSync } from 'node:sqlite';
 import { randomBytes, randomInt, randomUUID, createHash } from 'node:crypto';
 import { questions, quizVersion, teams } from './questions.mjs';
+import { defaultAvatar, isAvatar, normalizeAvatar } from '../shared/avatars.mjs';
 
 export class GameError extends Error {
   constructor(status, message) { super(message); this.status = status; }
@@ -30,6 +31,9 @@ export class Game {
       CREATE INDEX IF NOT EXISTS runs_room ON runs(room_id);
       CREATE INDEX IF NOT EXISTS events_room ON events(room_id, sequence);
     `);
+    if (!this.db.prepare('PRAGMA table_info(players)').all().some(column => column.name === 'avatar')) {
+      this.db.exec(`ALTER TABLE players ADD COLUMN avatar TEXT NOT NULL DEFAULT '${JSON.stringify(defaultAvatar)}'`);
+    }
   }
   close() { this.db.close(); }
   tx(fn) {
@@ -64,7 +68,7 @@ export class Game {
   room(id) {
     const row = this.db.prepare('SELECT * FROM rooms WHERE id=?').get(id);
     if (!row) fail(404, 'Sala não encontrada.');
-    return { ...JSON.parse(row.state), hostId: row.host_id, pin: row.pin };
+    return { scoringMode: 'fixed', ...JSON.parse(row.state), hostId: row.host_id, pin: row.pin };
   }
   authorize(room, actor, hostOnly = false) {
     if (!actor || (actor.role === 'host' && actor.id !== room.hostId) || (actor.role === 'player' && (hostOnly || actor.roomId !== room.id))) fail(403, 'Você não tem permissão nesta sala.');
@@ -88,17 +92,18 @@ export class Game {
         if (!this.db.prepare('SELECT id FROM rooms WHERE pin=?').get(candidate)) { pin = candidate; break; }
       }
       if (!pin) fail(503, 'Não foi possível reservar um PIN. Tente novamente.');
-      const room = { id: randomUUID(), hostId: actor.id, pin, phase: 'LOBBY', version: 0, locked: false, index: -1, quizVersion, quiz: this.quiz, countdownAt: null, runId: null, created: this.now() };
+      const room = { id: randomUUID(), hostId: actor.id, pin, phase: 'LOBBY', scoringMode: 'fixed', version: 0, locked: false, index: -1, quizVersion, quiz: this.quiz, countdownAt: null, runId: null, created: this.now() };
       this.db.prepare('INSERT INTO rooms VALUES (?, ?, ?, ?, ?)').run(room.id, pin, actor.id, JSON.stringify(room), this.now() + DAY);
       this.save(room, 'room.created');
       return { roomId: room.id };
     });
   }
-  join(pin, name, team) {
+  join(pin, name, team, avatar = defaultAvatar) {
     if (!/^\d{6}$/.test(pin || '')) fail(400, 'Digite um PIN de seis números.');
     name = typeof name === 'string' ? name.normalize('NFKC').trim().replace(/\s+/g, ' ') : '';
     if (name.length < 2 || name.length > 24 || /[\p{Cc}\p{Cf}]/u.test(name)) fail(400, 'Use um nome de 2 a 24 caracteres.');
     if (!teams.some(t => t.id === team)) fail(400, 'Escolha uma das quatro equipes.');
+    if (!isAvatar(avatar)) fail(400, 'Escolha as opções disponíveis para o avatar.');
     return this.tx(() => {
       const found = this.db.prepare('SELECT id FROM rooms WHERE pin=? AND expires>?').get(pin, this.now());
       if (!found) fail(404, 'PIN não encontrado ou partida encerrada.');
@@ -107,7 +112,7 @@ export class Game {
       if (this.db.prepare('SELECT count(*) AS n FROM players WHERE room_id=? AND team=? AND removed=0').get(room.id, team).n >= 4) fail(409, 'Equipe completa. Escolha outra equipe.');
       if (this.db.prepare('SELECT id FROM players WHERE room_id=? AND lower(name)=lower(?)').get(room.id, name)) fail(409, 'Este nome já foi usado nesta sala. Escolha outro.');
       const id = randomUUID(), token = secret();
-      this.db.prepare('INSERT INTO players(id, room_id, token_hash, name, team, joined) VALUES (?, ?, ?, ?, ?, ?)').run(id, room.id, hash(token), name, team, this.now());
+      this.db.prepare('INSERT INTO players(id, room_id, token_hash, name, team, joined, avatar) VALUES (?, ?, ?, ?, ?, ?, ?)').run(id, room.id, hash(token), name, team, this.now(), JSON.stringify(normalizeAvatar(avatar)));
       this.save(room, 'player.joined');
       return { roomId: room.id, playerId: id, token };
     });
@@ -122,9 +127,15 @@ export class Game {
     const run = this.db.prepare('SELECT * FROM runs WHERE id=?').get(room.runId);
     if (!run || run.closed !== null) return;
     const q = room.quiz[room.index];
-    for (const answer of this.db.prepare('SELECT * FROM answers WHERE run_id=?').all(run.id)) {
+    const answers = this.db.prepare('SELECT * FROM answers WHERE run_id=? ORDER BY received, rowid').all(run.id);
+    const totalCorrect = answers.filter(answer => answer.option_id === q.correctOptionId).length;
+    let correctIndex = 0;
+    for (const answer of answers) {
       const correct = Number(answer.option_id === q.correctOptionId);
-      this.db.prepare('INSERT INTO points VALUES (?, ?, ?, ?, ?)').run(run.id, answer.player_id, correct ? q.points : 0, correct, answer.received - run.opens);
+      const multiplier = room.scoringMode === 'speed' ? 1 - .5 * correctIndex / Math.max(1, totalCorrect - 1) : 1;
+      const points = correct ? Math.round(q.points * multiplier) : 0;
+      if (correct) correctIndex++;
+      this.db.prepare('INSERT INTO points VALUES (?, ?, ?, ?, ?)').run(run.id, answer.player_id, points, correct, answer.received - run.opens);
     }
     this.db.prepare('UPDATE runs SET closed=? WHERE id=? AND closed IS NULL').run(at, run.id);
     room.phase = 'QUESTION_RESULT';
@@ -197,6 +208,10 @@ export class Game {
         } else if (action === 'close') {
           if (room.phase !== 'QUESTION_OPEN') fail(409, 'Não há pergunta aberta.');
           this.finishQuestion(room, this.now());
+        } else if (action === 'settings') {
+          if (room.phase !== 'LOBBY') fail(409, 'Escolha a pontuação antes de iniciar a partida.');
+          if (!['fixed', 'speed'].includes(body.scoringMode)) fail(400, 'Modo de pontuação inválido.');
+          room.scoringMode = body.scoringMode;
         } else if (action === 'lock') {
           if (room.phase !== 'LOBBY' || typeof body.locked !== 'boolean') fail(409, 'As entradas só podem ser alteradas no lobby.');
           room.locked = body.locked;
@@ -214,16 +229,22 @@ export class Game {
   }
   snapshot(roomId, actor) {
     const room = this.room(roomId); this.authorize(room, actor);
-    const members = this.db.prepare('SELECT id, name, team FROM players WHERE room_id=? AND removed=0 ORDER BY joined, rowid').all(roomId);
+    const members = this.db.prepare('SELECT id, name, team, avatar FROM players WHERE room_id=? AND removed=0 ORDER BY joined, rowid').all(roomId)
+      .map(player => ({ ...player, avatar: normalizeAvatar(JSON.parse(player.avatar)) }));
     const ranking = teams.map((team, i) => {
       const totals = this.db.prepare('SELECT coalesce(sum(s.points),0) AS score, coalesce(sum(s.correct),0) AS correct FROM points s JOIN players p ON p.id=s.player_id WHERE p.room_id=? AND p.team=?').get(roomId, team.id);
       return { ...team, ...totals, order: i, count: members.filter(p => p.team === team.id).length };
     }).sort((a, b) => b.score - a.score || b.correct - a.correct || a.order - b.order).map((t, i, all) => ({ ...t, rank: all.findIndex(x => x.score === t.score && x.correct === t.correct) + 1 }));
     const sequence = this.db.prepare('SELECT max(sequence) AS n FROM events WHERE room_id=?').get(roomId).n || 0;
-    const view = { roomId, role: actor.role, phase: room.phase, version: room.version, sequence, serverTime: this.now(), locked: room.locked, questionNumber: room.index + 1, totalQuestions: room.quiz.length, teams: ranking, countdownAt: room.countdownAt };
+    const view = { roomId, role: actor.role, phase: room.phase, scoringMode: room.scoringMode, version: room.version, sequence, serverTime: this.now(), locked: room.locked, questionNumber: room.index + 1, totalQuestions: room.quiz.length, teams: ranking, countdownAt: room.countdownAt };
     if (actor.role === 'host') { view.pin = room.pin; view.players = members; }
     else { view.me = members.find(p => p.id === actor.id); }
-    view.allowedActions = actor.role === 'player' ? [] : room.phase === 'LOBBY' ? ['start', 'lock', 'remove', 'end'] : room.phase === 'QUESTION_OPEN' ? ['close', 'end'] : ['QUESTION_RESULT', 'LEADERBOARD'].includes(room.phase) ? ['next', 'end'] : room.phase === 'COUNTDOWN' ? ['end'] : [];
+    view.allowedActions = actor.role === 'player' ? [] : room.phase === 'LOBBY' ? ['start', 'settings', 'lock', 'remove', 'end'] : room.phase === 'QUESTION_OPEN' ? ['close', 'end'] : ['QUESTION_RESULT', 'LEADERBOARD'].includes(room.phase) ? ['next', 'end'] : room.phase === 'COUNTDOWN' ? ['end'] : [];
+    if (room.phase === 'ENDED') {
+      view.podium = ranking.filter(team => team.count > 0 && team.rank <= 3).map(team => ({
+        ...team, members: members.filter(player => player.team === team.id).map(({ name, avatar }) => ({ name, avatar })),
+      }));
+    }
     const run = room.runId ? this.db.prepare('SELECT * FROM runs WHERE id=?').get(room.runId) : null;
     if (run && !['LOBBY', 'COUNTDOWN', 'ENDED'].includes(room.phase)) {
       const q = room.quiz[room.index];

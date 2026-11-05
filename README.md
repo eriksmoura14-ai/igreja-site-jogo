@@ -59,8 +59,8 @@ O servidor usa a porta `3000`. Para desenvolver com reinício automático, use `
 
 1. Abra `/host`, crie sua conta de anfitrião e clique em **Criar partida**.
 2. Mostre o lobby no computador ou projetor. Ele exibe o PIN e um QR code próprio daquela sala, além de botões para copiar o PIN ou o link de entrada. O convite localiza a sala; não dá acesso aos controles.
-3. Cada participante abre `/join` e informa o PIN, ou escaneia o QR code para abrir `/join?pin=...` com o PIN preenchido. Depois informa o apelido e escolhe uma equipe. A entrada continua sujeita às mesmas regras de sala ativa, bloqueio e lotação.
-4. O anfitrião inicia a partida. Cada celular recebe a pergunta e quatro botões; não recebe controles administrativos.
+3. Cada participante abre `/join` e informa o PIN, ou escaneia o QR code para abrir `/join?pin=...` com o PIN preenchido. Depois informa o apelido, personaliza seu avatar e escolhe uma equipe. O avatar tem cor, tom de pele, expressão e acessório; a prévia muda antes de entrar. A entrada continua sujeita às mesmas regras de sala ativa, bloqueio e lotação.
+4. No lobby, o anfitrião escolhe **Pontos fixos** ou **Ordem dos acertos** e inicia a partida. Cada celular recebe a pergunta e quatro botões; não recebe controles administrativos. O modo fica congelado depois do início.
 5. A pergunta fecha quando todos respondem, ao atingir o prazo ou por comando do anfitrião. Então aparecem a resposta correta, a explicação e a referência bíblica.
 6. O anfitrião avança ao ranking e, depois, à próxima pergunta. Após a pergunta 50, aparece a classificação final.
 
@@ -73,9 +73,10 @@ Recarregar a página restaura a mesma identidade e o prazo original, enquanto os
 - Cada participante responde individualmente. Os acertos somam pontos à equipe.
 - 50 perguntas: 10 fáceis (100 pontos), 25 médias (200) e 15 difíceis (300).
 - 30 segundos por pergunta; três segundos de preparação entre perguntas.
-- Pontuação fixa por dificuldade, sem bônus por velocidade. Esta é uma decisão própria para concretizar a referência enviada.
+- **Pontos fixos** é o padrão: todos os acertos recebem 100, 200 ou 300 pontos por dificuldade. Em **Ordem dos acertos**, o primeiro acerto recebe 100% do valor e o último, 50%; os intermediários recebem valores proporcionais, arredondados ao inteiro mais próximo. Um único acerto recebe o valor máximo. Erros e ausências recebem zero. A ordem considera o horário de recebimento no servidor; em empate no mesmo milissegundo, vale a ordem de aceitação. Não é uma fórmula baseada no relógio do cliente.
 - Uma resposta por participante e pergunta, sem alteração após envio. O servidor verifica a alternativa e o prazo; informações de pontos ou identidade enviadas pelo cliente são ignoradas.
 - Desempate: pontuação, depois número de acertos; persistindo, a colocação é compartilhada.
+- Ao encerrar, o pódio mostra as equipes participantes nas três primeiras colocações, com seus avatares. Equipes empatadas compartilham o mesmo degrau; equipes vazias não aparecem. O ranking completo continua disponível abaixo do pódio.
 - Entrada apenas no lobby. Iniciar bloqueia novos participantes. Remoção e bloqueio manual estão disponíveis no lobby.
 - Desconectar não altera o prazo nem fecha a pergunta. Encerrar a partida descarta a pergunta ainda aberta e conserva os pontos de perguntas já fechadas.
 - Salas expiram em 24 horas; seus dados permanecem acessíveis por sessão autorizada durante sete dias adicionais, até a limpeza automática.
@@ -94,11 +95,13 @@ O banco inicial em `src/questions.mjs` foi preparado para esta implementação, 
 
 A marca é uma **arte de lettering**, em `public/brand/despertos-wordmark.ffe9732aa666.png`: pinceladas inclinadas, DESPER branco e TOS laranja. A mesma imagem é usada na abertura e no cabeçalho, com texto acessível, proporção preservada e subtítulo separado em **Montserrat Bold 700**. É uma recriação gráfica baseada nos atributos da referência, gerada para este projeto; não foi extraída da imagem original e não representa a identificação de uma fonte original.
 
-Os títulos e perguntas usam **Anton Regular**; os textos e alternativas usam **Poppins**, com pesos de 400 a 800 e itálico para citações; os números de cronômetro, PIN e placar usam **Bebas Neue Regular**. Essas famílias estão entre as opções escritas no painel fornecido. Os arquivos WOFF2 ficam em `public/fonts/`, com acentos do português e licenças SIL Open Font License 1.1. `font-synthesis: none` impede negrito e itálico simulados. Os critérios de comparação estão em `docs/visual-reference.md`.
+Os títulos e perguntas usam **Anton Regular**; os textos e alternativas usam **Poppins**, com pesos de 400 a 800 e itálico para citações; o cronômetro e os números gerais usam **Bebas Neue Regular**. A fonte **Press Start 2P**, em estilo arcade pixelado, destaca PLAY!, PIN, contagem regressiva, pontos individuais e pódio, com laranja `#FF9800`. Os arquivos WOFF2 ficam em `public/fonts/`, com acentos do português e licenças SIL Open Font License 1.1. `font-synthesis: none` impede negrito e itálico simulados. Os critérios de comparação estão em `docs/visual-reference.md`.
 
 As fontes vieram dos pacotes Fontsource 5.3.0. O script opcional `python3 scripts/vendor_fonts.py` reproduz a importação e verifica o SHA-512 de cada pacote antes de gravar os arquivos. Ele não é necessário no build/deploy: os arquivos já estão no Git.
 
-`public/type-motion.css` define as fontes e os estados visuais. `public/motion.js` concentra os efeitos: entrada de conteúdo, revelação ao rolar, escolha de equipe, toque nos botões, contagem regressiva, alternativas em sequência, confirmação de resposta, barras/posições do ranking e confetes breves em acertos e vitórias. As animações são decorativas e não atrasam respostas nem alteram o cronômetro do servidor.
+`public/type-motion.css` e `public/arcade.css` definem as fontes e os estados visuais. `public/motion.js` concentra os efeitos: entrada de conteúdo, revelação ao rolar, escolha de equipe, prévia do avatar, toque nos botões, contagem regressiva, alternativas em sequência, confirmação de resposta, subida do pódio, barras/posições do ranking e confetes breves em acertos e vitórias. As animações são decorativas e não atrasam respostas nem alteram o cronômetro do servidor.
+
+Os avatares são SVGs pixelados gerados localmente a partir de opções enumeradas em `shared/avatars.mjs`. O servidor valida e persiste as quatro escolhas; não aceita SVG, URL ou HTML enviados pelo participante. A configuração permanece vinculada à identidade do jogador ao recarregar. O navegador guarda apenas a preferência visual para a próxima entrada. Bancos antigos recebem a coluna de avatar automaticamente, e salas antigas continuam no modo fixo.
 
 Snapshots repetidos não remontam a tela nem reiniciam efeitos. A preferência **reduzir movimento** do sistema desativa as animações e as comemorações; mudar essa preferência também cancela efeitos em andamento. Os testes em Chromium verificam fontes carregadas, celular/desktop, contagem animada, progresso sem repetir a entrada da pergunta e movimento reduzido.
 
@@ -129,6 +132,8 @@ Esta versão não inclui recuperação de senha, editor de quizzes, transferênc
 ## Validação
 
 `npm test` usa bancos temporários e não altera partidas reais. Verifica uma partida completa com as 50 perguntas, pontos por dificuldade, empates, reconexão, reinício durante a contagem/pergunta, PIN único, timeout exato, duplicidade, isolamento entre salas, autorização, CSRF, proteção dos arquivos e eventos SSE sem vazamento de gabarito.
+
+`python3 scripts/smoke_arcade.py` usa os mesmos Playwright Python e Chromium do teste visual. Valida três avatares personalizados, os modos fixo e por ordem, pontuação 100/75/50, pódio com três colocações e com empate, leitura em celular/desktop, fonte pixelada e movimento reduzido. Por padrão usa banco temporário; com `SMOKE_BASE_URL=https://seu-dominio`, cria uma conta de teste no deploy e encerra as duas salas usadas. As capturas ficam em `/tmp/despertos-arcade-ui-.../`.
 
 O QR code é gerado em SVG em `/api/rooms/:roomId/qr?view=host`, somente para o anfitrião proprietário enquanto a sala está no lobby. Ele contém apenas a URL pública de ingresso com o PIN, nunca uma sessão administrativa. O endereço usa `PUBLIC_ORIGIN`, a origem Render ou a origem local configurada. Nenhum serviço de terceiros recebe os dados do convite.
 

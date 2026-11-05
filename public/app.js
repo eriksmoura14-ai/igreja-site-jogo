@@ -1,5 +1,7 @@
 /* Cada página recebe somente a projeção autorizada pelo servidor. */
 import { animatePage, animateRoom, animateCountdown, animateSelection, animateTap, animateToast } from './motion.js';
+import { avatarSvg } from './avatars.js';
+import { avatarPicker, bindAvatarPicker, scoringSettings, scoringDescription, podiumMarkup } from './arcade.js';
 
 const app = document.querySelector('#app');
 const catalog = [
@@ -41,17 +43,19 @@ async function api(path, data) {
   return value;
 }
 function joinForm() {
-  return `<form id="join-form"><label for="pin">PIN DO JOGO</label><input id="pin" name="pin" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" minlength="6" placeholder="000 000" required autocomplete="off"><label for="nickname">COMO VOCÊ QUER SER CHAMADO?</label><input id="nickname" name="name" placeholder="Seu nome ou apelido" minlength="2" maxlength="24" required autocomplete="nickname"><fieldset><legend>ESCOLHA SUA EQUIPE <span>ATÉ 4 POR EQUIPE</span></legend><div class="team-grid">${catalog.map(t => `<label class="team-choice team-${t.id}"><input type="radio" name="team" value="${t.id}" required>${icon(t.id)}<strong>${t.name}</strong><span>${t.label}</span></label>`).join('')}</div></fieldset><button class="button primary full" type="submit">Entrar no desafio ${icon('arrow')}</button><p class="form-note">O PIN aparece na tela do anfitrião.</p></form>`;
+  return `<form id="join-form"><label for="pin">PIN DO JOGO</label><input id="pin" name="pin" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" minlength="6" placeholder="000 000" required autocomplete="off"><label for="nickname">COMO VOCÊ QUER SER CHAMADO?</label><input id="nickname" name="name" placeholder="Seu nome ou apelido" minlength="2" maxlength="24" required autocomplete="nickname">${avatarPicker()}<fieldset><legend>ESCOLHA SUA EQUIPE <span>ATÉ 4 POR EQUIPE</span></legend><div class="team-grid">${catalog.map(t => `<label class="team-choice team-${t.id}"><input type="radio" name="team" value="${t.id}" required>${icon(t.id)}<strong>${t.name}</strong><span>${t.label}</span></label>`).join('')}</div></fieldset><button class="button primary full" type="submit">Entrar no desafio ${icon('arrow')}</button><p class="form-note">O PIN aparece na tela do anfitrião.</p></form>`;
 }
 function bindJoin() {
+  const getAvatar = bindAvatarPicker(document.querySelector('#join-form'));
   const pin = new URLSearchParams(location.search).get('pin');
   if (/^\d{6}$/.test(pin || '')) {
     document.querySelector('#pin').value = pin;
     document.querySelector('#join-form .form-note').textContent = 'PIN da sala preenchido. Informe seu nome e escolha sua equipe.';
   }
   document.querySelector('#join-form').addEventListener('submit', async e => {
-    e.preventDefault(); const button = e.target.querySelector('button'); button.disabled = true;
+    e.preventDefault(); const button = e.target.querySelector('button[type="submit"]'); button.disabled = true;
     const data = Object.fromEntries(new FormData(e.target));
+    data.avatar = getAvatar();
     try { const result = await api('/api/join', data); location.assign(`/play/${result.roomId}`); }
     catch (error) { toast(error.message); button.disabled = false; }
   });
@@ -93,12 +97,12 @@ let current, stream, offset = 0, pending = false, pendingCommand = null;
 function teamCards(s, host = false) {
   return `<div class="lobby-teams">${catalog.map(t => {
     const team = s.teams.find(x => x.id === t.id), players = (s.players || []).filter(p => p.team === t.id);
-    return `<article class="lobby-team team-${t.id}"><div class="lobby-team-head">${icon(t.id)}<div><small>${t.label.toUpperCase()}</small><h3>${t.name}</h3></div><span>${team.count}<small> / 4</small></span></div>${host ? `<ul>${players.map(p => `<li><span>${esc(p.name)}</span>${s.phase === 'LOBBY' ? `<button data-remove="${p.id}" aria-label="Remover ${esc(p.name)}">×</button>` : ''}</li>`).join('')}${Array.from({ length: 4 - players.length }, () => '<li class="empty-slot">Aguardando participante<span>+</span></li>').join('')}</ul>` : `<div class="team-slots">${Array.from({ length: 4 }, (_, i) => `<span class="${i < team.count ? 'filled' : ''}"></span>`).join('')}</div>`}</article>`;
+    return `<article class="lobby-team team-${t.id}"><div class="lobby-team-head">${icon(t.id)}<div><small>${t.label.toUpperCase()}</small><h3>${t.name}</h3></div><span>${team.count}<small> / 4</small></span></div>${host ? `<ul>${players.map(p => `<li><span class="lobby-player-avatar">${avatarSvg(p.avatar, `Avatar de ${p.name}`)}<span>${esc(p.name)}</span></span>${s.phase === 'LOBBY' ? `<button data-remove="${p.id}" aria-label="Remover ${esc(p.name)}">×</button>` : ''}</li>`).join('')}${Array.from({ length: 4 - players.length }, () => '<li class="empty-slot">Aguardando participante<span>+</span></li>').join('')}</ul>` : `<div class="team-slots">${Array.from({ length: 4 }, (_, i) => `<span class="${i < team.count ? 'filled' : ''}"></span>`).join('')}</div>`}</article>`;
   }).join('')}</div>`;
 }
 function leaderboard(s, final = false) {
   const leaders = s.teams.filter(t => t.rank === 1 && t.count > 0);
-  return `<div class="leaderboard"><div class="leaderboard-title">${icon('crown')}<div><span class="eyebrow orange">${final ? 'O CONHECIMENTO NOS TROUXE ATÉ AQUI' : 'CADA ACERTO FAZ A DIFERENÇA'}</span><h1>${final ? 'Essa vitória é nossa.' : 'Classificação'}</h1></div>${!final ? '<span class="live-badge"><i></i> AO VIVO</span>' : ''}</div>${final ? `<div class="winner-line">${leaders.length > 1 ? 'Vitória compartilhada' : 'Equipe vencedora'}: <strong>${leaders.map(t => esc(t.name)).join(' + ') || 'Sem participantes'}</strong></div>` : ''}<div class="ranking-list">${s.teams.map(t => `<article data-team-id="${t.id}" class="ranking-row team-${t.id} ${s.me?.team === t.id ? 'my-team' : ''}"><strong class="rank-number">${t.rank}<small>º</small></strong>${icon(t.id)}<div class="ranking-info"><div><strong>${esc(t.name)} ${s.me?.team === t.id ? '<span class="you-tag">SUA EQUIPE</span>' : ''}</strong><span><b>${t.score.toLocaleString('pt-BR')}</b> pts</span></div><div class="score-track"><span data-width="${s.teams[0].score ? Math.round(t.score / s.teams[0].score * 100) : 0}"></span></div><small>${t.correct} acertos · ${t.count} participantes</small></div></article>`).join('')}</div><p class="form-note">Pontos por equipe. Em caso de empate: mais acertos; persistindo, a posição é compartilhada.</p></div>`;
+  return `<div class="leaderboard"><div class="leaderboard-title">${icon('crown')}<div><span class="eyebrow orange">${final ? 'O CONHECIMENTO NOS TROUXE ATÉ AQUI' : 'CADA ACERTO FAZ A DIFERENÇA'}</span><h1>${final ? 'Essa vitória é nossa.' : 'Classificação'}</h1></div>${!final ? '<span class="live-badge"><i></i> AO VIVO</span>' : ''}</div>${final ? `<div class="winner-line">${leaders.length > 1 ? 'Vitória compartilhada' : 'Equipe vencedora'}: <strong>${leaders.map(t => esc(t.name)).join(' + ') || 'Sem participantes'}</strong></div>${podiumMarkup(s)}` : ''}<div class="ranking-list">${s.teams.map(t => `<article data-team-id="${t.id}" class="ranking-row team-${t.id} ${s.me?.team === t.id ? 'my-team' : ''}"><strong class="rank-number">${t.rank}<small>º</small></strong>${icon(t.id)}<div class="ranking-info"><div><strong>${esc(t.name)} ${s.me?.team === t.id ? '<span class="you-tag">SUA EQUIPE</span>' : ''}</strong><span><b>${t.score.toLocaleString('pt-BR')}</b> pts</span></div><div class="score-track"><span data-width="${s.teams[0].score ? Math.round(t.score / s.teams[0].score * 100) : 0}"></span></div><small>${t.correct} acertos · ${t.count} participantes</small></div></article>`).join('')}</div><p class="form-note">Pontos por equipe. Em caso de empate: mais acertos; persistindo, a posição é compartilhada.</p></div>`;
 }
 function hostView(s) {
   let content = '';
@@ -106,11 +110,11 @@ function hostView(s) {
   if (s.phase === 'LOBBY') {
     const joinUrl = new URL('/join', location.origin);
     joinUrl.searchParams.set('pin', s.pin);
-    content = `<div class="lobby-heading"><div class="lobby-intro"><span class="eyebrow orange">O PRÓXIMO PASSO É JUNTOS.</span><h1>Reúna sua equipe.</h1><p>Digite o PIN ou escaneie o QR code para entrar nesta sala.</p><div class="join-address" id="join-address"></div></div><div class="room-entry-options"><section class="pin-card" aria-label="Entrar com código"><span>PIN DO JOGO</span><strong>${esc(s.pin.slice(0, 3))} ${esc(s.pin.slice(3))}</strong><p>Digite este PIN na tela de entrada.</p><button id="copy-pin">Copiar PIN ${icon('phone')}</button></section><section class="room-qr-card" aria-labelledby="qr-title"><h2 id="qr-title">OU ENTRE PELO QR CODE</h2><a id="room-invite-link" class="room-qr-link" href="${esc(joinUrl.href)}" target="_blank" rel="noopener" aria-label="Abrir entrada desta sala em outra aba"><img id="room-qr" src="/api/rooms/${esc(s.roomId)}/qr?view=host" width="256" height="256" alt="QR code para entrar nesta sala com o PIN ${esc(s.pin)}"></a><p>Abra a câmera do celular<br>e aponte para este código.</p><button id="copy-join-link">Copiar link da sala ${icon('phone')}</button></section></div></div><div class="lobby-bar"><h2>${s.players.length}<span> / 16 participantes</span></h2><button id="lock" class="button quiet">${icon('lock')} ${s.locked ? 'Liberar entradas' : 'Bloquear entradas'}</button></div>${teamCards(s, true)}<div class="host-controls"><p>${icon('people')} Até 4 integrantes por equipe. Todos respondem no próprio celular.</p><button data-command="start" class="button primary" ${s.players.length ? '' : 'disabled'}>Iniciar desafio ${icon('arrow')}</button></div><div class="rules-inline"><span>50 PERGUNTAS</span><span>30 SEGUNDOS POR PERGUNTA</span><span>100 / 200 / 300 PONTOS POR ACERTO</span></div>`;
+    content = `<div class="lobby-heading"><div class="lobby-intro"><span class="arcade-word">PLAY!</span><span class="eyebrow orange">O PRÓXIMO PASSO É JUNTOS.</span><h1>Reúna sua equipe.</h1><p>Digite o PIN ou escaneie o QR code para entrar nesta sala.</p><div class="join-address" id="join-address"></div></div><div class="room-entry-options"><section class="pin-card" aria-label="Entrar com código"><span>PIN DO JOGO</span><strong>${esc(s.pin.slice(0, 3))} ${esc(s.pin.slice(3))}</strong><p>Digite este PIN na tela de entrada.</p><button id="copy-pin">Copiar PIN ${icon('phone')}</button></section><section class="room-qr-card" aria-labelledby="qr-title"><h2 id="qr-title">OU ENTRE PELO QR CODE</h2><a id="room-invite-link" class="room-qr-link" href="${esc(joinUrl.href)}" target="_blank" rel="noopener" aria-label="Abrir entrada desta sala em outra aba"><img id="room-qr" src="/api/rooms/${esc(s.roomId)}/qr?view=host" width="256" height="256" alt="QR code para entrar nesta sala com o PIN ${esc(s.pin)}"></a><p>Abra a câmera do celular<br>e aponte para este código.</p><button id="copy-join-link">Copiar link da sala ${icon('phone')}</button></section></div></div>${scoringSettings(s)}<div class="lobby-bar"><h2>${s.players.length}<span> / 16 participantes</span></h2><button id="lock" class="button quiet">${icon('lock')} ${s.locked ? 'Liberar entradas' : 'Bloquear entradas'}</button></div>${teamCards(s, true)}<div class="host-controls"><p>${icon('people')} Até 4 integrantes por equipe. Todos respondem no próprio celular.</p><button data-command="start" class="button primary" ${s.players.length ? '' : 'disabled'}>Iniciar desafio ${icon('arrow')}</button></div><div class="rules-inline"><span>50 PERGUNTAS</span><span>30 SEGUNDOS POR PERGUNTA</span><span>${s.scoringMode === 'speed' ? 'MAIS PONTOS PARA OS PRIMEIROS ACERTOS' : '100 / 200 / 300 PONTOS POR ACERTO'}</span></div>`;
   } else if (s.phase === 'COUNTDOWN') {
     content = `<section class="countdown-screen"><span class="eyebrow orange">PERGUNTA ${s.questionNumber} DE ${s.totalQuestions}</span><h1>Foco na Palavra.</h1><div class="countdown-number" id="countdown">3</div><p>Equipes, preparem seus celulares.</p></section>`;
   } else if (s.phase === 'QUESTION_OPEN') {
-    content = `<div class="question-meta"><span>PERGUNTA <b>${s.questionNumber}</b> / ${s.totalQuestions}</span>${difficulty(s.question)}<span>${s.question.maxPoints} PONTOS POR ACERTO</span><div class="timer" id="timer">30<small>s</small></div></div><section class="host-question"><h1>${esc(s.question.text)}</h1><div class="answer-grid">${s.question.options.map(o => `<div class="answer-option option-${o.id}"><b>${o.id}</b><span>${esc(o.text)}</span>${icon(({ A: 'eagle', B: 'wolf', C: 'lion', D: 'crown' })[o.id])}</div>`).join('')}</div><div class="progress-line"><span>${icon('people')} <b>${s.progress.answered}</b> de ${s.progress.total} respostas recebidas</span><button data-command="close" class="button quiet">Encerrar pergunta</button></div><div class="time-track"><span id="time-fill"></span></div></section>`;
+    content = `<div class="question-meta"><span>PERGUNTA <b>${s.questionNumber}</b> / ${s.totalQuestions}</span>${difficulty(s.question)}<span>${s.scoringMode === 'speed' ? 'ATÉ ' : ''}${s.question.maxPoints} PONTOS${s.scoringMode === 'speed' ? '' : ' POR ACERTO'}</span><div class="timer" id="timer">30<small>s</small></div></div><section class="host-question"><h1>${esc(s.question.text)}</h1><div class="answer-grid">${s.question.options.map(o => `<div class="answer-option option-${o.id}"><b>${o.id}</b><span>${esc(o.text)}</span>${icon(({ A: 'eagle', B: 'wolf', C: 'lion', D: 'crown' })[o.id])}</div>`).join('')}</div><div class="progress-line"><span>${icon('people')} <b>${s.progress.answered}</b> de ${s.progress.total} respostas recebidas</span><button data-command="close" class="button quiet">Encerrar pergunta</button></div><div class="time-track"><span id="time-fill"></span></div></section>`;
   } else if (s.phase === 'QUESTION_RESULT') {
     const option = s.question.options.find(o => o.id === s.result.correctOptionId);
     content = `<section class="result-screen"><div class="result-icon">${icon('check')}</div><span class="eyebrow green">CONHECIMENTO QUE TRANSFORMA</span><h1>Essa é a resposta!</h1><p>${esc(s.question.text)}</p><div class="correct-answer"><b>${esc(option.id)}</b><strong>${esc(option.text)}</strong></div><blockquote>${esc(s.result.explanation)}<cite>${esc(s.result.reference)}</cite></blockquote><button data-command="next" class="button green-button">Ver classificação ${icon('arrow')}</button></section>`;
@@ -127,6 +131,7 @@ function hostView(s) {
     try { await navigator.clipboard.writeText(link); toast('Link da sala copiado!', true); } catch { toast(link); }
   });
   document.querySelector('#lock')?.addEventListener('click', () => command('lock', { locked: !s.locked }));
+  document.querySelector('#scoring-mode')?.addEventListener('change', event => command('settings', { scoringMode: event.target.value }));
   document.querySelectorAll('[data-command]').forEach(b => { b.onclick = () => command(b.dataset.command); });
   document.querySelectorAll('[data-remove]').forEach(b => { b.onclick = () => command('remove', { playerId: b.dataset.remove }); });
   document.querySelector('#end-game')?.addEventListener('click', () => document.querySelector('#end-dialog').showModal());
@@ -135,10 +140,10 @@ function hostView(s) {
 }
 function playerView(s) {
   const team = catalog.find(t => t.id === s.me.team), ownTeam = s.teams.find(t => t.id === team.id);
-  const top = `<div class="player-identity team-${team.id}"><div>${icon(team.id)}<span><small>${team.label} • ${team.name}</small><strong>${esc(s.me.name)}</strong></span></div><span class="connection" id="connection">Conectado</span></div>`;
+  const top = `<div class="player-identity team-${team.id}"><div>${avatarSvg(s.me.avatar, `Avatar de ${s.me.name}`)}<span><small>${team.label} • ${team.name}</small><strong>${esc(s.me.name)}</strong></span></div><span class="connection" id="connection">Conectado</span></div>`;
   let content;
   if (s.phase === 'LOBBY') {
-    content = `<section class="player-wait team-${team.id}"><div class="player-emblem">${icon(team.id)}</div><span class="eyebrow">VOCÊ ESTÁ NA EQUIPE</span><h1>${team.name}</h1><p>Agora é com vocês.<br>Aguarde o anfitrião iniciar o desafio.</p><div class="waiting-pill"><i></i> ESPERANDO O JOGO COMEÇAR</div></section><div class="player-instructions"><h2>Seu celular é seu controle.</h2><p>Leia a pergunta e toque em uma das quatro alternativas. Cada acerto vale pontos para sua equipe.</p><div><span>01<br><b>Leia</b></span><span>02<br><b>Responda</b></span><span>03<br><b>Some pontos</b></span></div></div>`;
+    content = `<section class="player-wait team-${team.id}"><div class="player-emblem">${icon(team.id)}</div><span class="eyebrow">VOCÊ ESTÁ NA EQUIPE</span><h1>${team.name}</h1><p>Agora é com vocês.<br>Aguarde o anfitrião iniciar o desafio.</p><p class="player-scoring-note">${scoringDescription(s.scoringMode)}</p><div class="waiting-pill"><i></i> ESPERANDO O JOGO COMEÇAR</div></section><div class="player-instructions"><h2>Seu celular é seu controle.</h2><p>Leia a pergunta e toque em uma das quatro alternativas. Cada acerto vale pontos para sua equipe.</p><div><span>01<br><b>Leia</b></span><span>02<br><b>Responda</b></span><span>03<br><b>Some pontos</b></span></div></div>`;
   } else if (s.phase === 'COUNTDOWN') {
     content = `<section class="countdown-screen"><span class="eyebrow orange">PERGUNTA ${s.questionNumber} DE ${s.totalQuestions}</span><h1>É hora de despertar.</h1><div class="countdown-number" id="countdown">3</div><p>Uma equipe. Um propósito.</p></section>`;
   } else if (s.phase === 'QUESTION_OPEN') {
@@ -190,7 +195,7 @@ async function command(action, extra = {}) {
   const candidate = { action, expectedVersion: current.version, ...extra };
   if (!pendingCommand || JSON.stringify(pendingCommand.candidate) !== JSON.stringify(candidate)) pendingCommand = { candidate, body: { ...candidate, requestId: crypto.randomUUID() } };
   const payload = pendingCommand.body;
-  const controls = [...document.querySelectorAll('[data-answer], [data-command], #lock, #confirm-end')].filter(button => !button.disabled);
+  const controls = [...document.querySelectorAll('[data-answer], [data-command], #lock, #confirm-end, #scoring-mode')].filter(button => !button.disabled);
   controls.forEach(button => { button.disabled = true; });
   try {
     await api(`/api/rooms/${current.roomId}/commands?view=${current.role}`, payload);
@@ -203,6 +208,7 @@ async function command(action, extra = {}) {
   } finally {
     pending = false;
     controls.forEach(button => { if (button.isConnected) button.disabled = false; });
+    const scoring = document.querySelector('#scoring-mode'); if (scoring) scoring.value = current.scoringMode;
     updateTime();
   }
 }

@@ -5,9 +5,11 @@ import io
 from pathlib import Path
 import tarfile
 import urllib.request
+import sys
 
 DEST = Path(__file__).resolve().parents[1] / 'public' / 'fonts'
 PACKAGES = {
+    'press-start-2p': ('gxWFxdeDglPhEYSwEeooomcaFK8kSQYLQwVxfnOJeYRj2sPEHXjpVtFgEaYfqzOjuAJGrIcJOipu2KY5YkbyuQ==', [(400, 'normal')]),
     'anton': ('OR1D5n124n2XRs66SbX7IjcOSptljEJE8FcDNnlni2y1/M6KpTx7cU2PIWzTSsBj4WFkHPw24On8qw3qkQZuTw==', [(400, 'normal')]),
     'montserrat': ('iQPDtZOnmM5ih4JBGaMSXisRap0ixb9bAUw2hDtY7EjVfaqiiNlKtVuJl9XclxUwtwMMHNcWXfQR6zI9x05+Tg==', [(700, 'normal')]),
     'bebas-neue': ('nCxMEb9Bg9sjNWm9TIOsvHKDMLRUfEZPWpLgYu6m9KavZZVSA/WoHzI5wROwqA+eNwEi/PNBAcB5Co7HA3S0Cw==', [(400, 'normal')]),
@@ -16,7 +18,8 @@ PACKAGES = {
 
 def main():
     DEST.mkdir(parents=True, exist_ok=True)
-    for name, (checksum, faces) in PACKAGES.items():
+    for name in (sys.argv[1:] or PACKAGES):
+        checksum, faces = PACKAGES[name]
         url = f'https://registry.npmjs.org/@fontsource/{name}/-/{name}-5.3.0.tgz'
         with urllib.request.urlopen(url, timeout=30) as response:
             data = response.read()

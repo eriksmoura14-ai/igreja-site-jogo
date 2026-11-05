@@ -58,6 +58,12 @@ export function animateTap(element) {
   animate(element, [{ scale: '.97' }, { scale: '1' }], { duration: 150 });
 }
 
+export function animateAvatar(element) {
+  animate(element?.querySelector('.pixel-avatar'), [
+    { scale: '.85', rotate: '-5deg' }, { scale: '1.08', rotate: '3deg', offset: .65 }, { scale: '1', rotate: '0deg' },
+  ], { duration: 320, easing: 'steps(8, end)' });
+}
+
 export function animateToast(element) { enter(element); }
 
 function celebrate() {
@@ -89,6 +95,12 @@ export function animateRoom(snapshot, { sceneChanged = false, previous } = {}) {
     enter(document.querySelector('.host-question, .player-question, .countdown-screen, .result-screen, .player-result, .player-wait, .leaderboard, .lobby-heading'));
     document.querySelectorAll('.answer-grid .answer-option, .player-answers .answer-option, .lobby-team').forEach((element, index) => enter(element, index * 45));
     animateCountdown(document.querySelector('#countdown'));
+    if (snapshot.phase === 'ENDED') {
+      document.querySelectorAll('.podium-stage').forEach((stage, index) => {
+        animate(stage, [{ opacity: 0, translate: '0 55px', scale: '.9' }, { opacity: 1, translate: '0 0', scale: '1' }],
+          { duration: 650, delay: index * 160, fill: 'backwards', easing: 'cubic-bezier(.2,.8,.2,1.1)' });
+      });
+    }
     animate(document.querySelector('.result-icon, .answer-sent > .icon'), [
       { scale: '.7', opacity: 0 }, { scale: '1.08', opacity: 1, offset: .7 }, { scale: '1', opacity: 1 },
     ], { duration: 440 });
