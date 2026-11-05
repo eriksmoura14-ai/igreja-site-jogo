@@ -40,7 +40,21 @@ Se o deploy falhar, confira **Logs** no serviço: o build deve executar os teste
 
 ### Por que Render nesta versão?
 
-O backend depende de um processo Node contínuo, de um relógio compartilhado e do SQLite local. A arquitetura atual se encaixa em um Web Service do Render. Para hospedar tudo na Vercel, seria necessário adaptar o backend e adotar armazenamento e sincronização apropriados ao modelo de execução; simplesmente importar este repositório como site estático não coloca o jogo multiplayer em funcionamento.
+O backend depende de um processo Node contínuo, de um relógio compartilhado e do SQLite local. A arquitetura atual se encaixa em um Web Service do Render. Para executar o backend na Vercel, seria necessário adaptar o armazenamento e a sincronização ao seu modelo de execução. A integração abaixo permite usar um endereço Vercel para o jogo completo, mantendo o servidor multiplayer no Render.
+
+## Demonstração multiplayer pela Vercel
+
+A Vercel funciona como proxy HTTPS do servidor Render. Páginas, API, cookies e SSE passam pelo mesmo endereço público. Não há uma função Vercel executando SQLite, nem cópia do banco ou das sessões na Vercel. O servidor Render deve estar ativo para abrir as telas e jogar.
+
+1. Publique o serviço Render conforme as instruções acima, ou use o serviço existente. Copie a origem HTTPS atribuída pelo painel; não invente o subdomínio. Confira que `/api/health` retorna `{"status":"ok"}`.
+2. Na Vercel, importe este repositório, usando uma branch que contenha `vercel.json` e `scripts/build-vercel.mjs`. Selecione **Other** como framework e **Node.js 24.x**. Use a raiz do repositório e mantenha os comandos de instalação e build definidos em `vercel.json`; não configure uma saída estática `public`.
+3. Nas variáveis do projeto Vercel, defina **`GAME_SERVER_ORIGIN`** com a origem HTTPS real do Render, sem caminho. Essa variável é um endereço público, não uma credencial. O build gera `.vercel/output/config.json` pela Build Output API e falha com uma mensagem se o endereço estiver ausente ou inválido. Publique o projeto na Vercel.
+4. Copie a origem de produção que a Vercel realmente atribuiu. No Render, defina **`PUBLIC_ORIGIN`** com essa origem exata, sem barra final, e mantenha **`COOKIE_SECURE=1`**. Aguarde o serviço reiniciar. Essa configuração autoriza o cadastro e os comandos enviados pelo endereço Vercel; não libere origens arbitrárias. Use sempre o mesmo domínio de produção; endereços de preview diferentes não estarão autorizados.
+5. Pelo endereço Vercel, confira `/api/health`, abra `/host`, crie uma conta e uma partida. Em outro navegador ou celular, abra `/join` no **mesmo domínio**, entre pelo PIN, responda e confira o resultado no painel. Esse teste remoto, incluindo reconexão, é necessário antes de considerar a publicação validada. Deploys protegidos na Vercel precisam permitir o acesso dos participantes.
+
+Não há custo de disco configurado automaticamente. No plano gratuito do Render, o servidor pode dormir e os dados podem desaparecer em reinícios; use essa modalidade para demonstrações. Publicar as configurações não comprova que as contas já estão conectadas ou que os serviços foram criados.
+
+O navegador reconecta o SSE e recebe o estado atual quando uma conexão é interrompida pelo proxy. A validação local cobre o multiplayer e a geração das rotas; limites e comportamento da conexão na infraestrutura Vercel/Render precisam ser conferidos no deploy real.
 
 ## Executar
 
