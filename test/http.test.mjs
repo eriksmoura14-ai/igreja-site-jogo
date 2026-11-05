@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
+import { request as httpRequest } from 'node:http';
 import { Game } from '../src/game.mjs';
 import { createApp } from '../src/server.mjs';
 
@@ -184,4 +185,32 @@ test('HTTP: avatar personalizado passa pela validação e não permite alterar a
   assert.equal(changed.res.status, 200);
   assert.equal((await f.command('settings', { scoringMode: 'fixed' }, joined.cookie, 'player')).res.status, 403);
   assert.equal((await f.request(`/api/rooms/${f.roomId}/snapshot?view=player`, undefined, joined.cookie)).value.scoringMode, 'speed');
+});
+
+test('HTTP: rapidez conta a resposta completa aceita, sem premiar uma requisição iniciada antes e enviada lentamente', async t => {
+  const f = await fixture(t);
+  await f.command('settings', { scoringMode: 'speed' });
+  await f.command('start'); f.advance(3000);
+  const state = await f.request(`/api/rooms/${f.roomId}/snapshot?view=host`, undefined, f.host);
+  const path = `/api/rooms/${f.roomId}/commands?view=player`;
+  const payload = JSON.stringify({ action: 'answer', requestId: randomUUID(), questionRunId: state.value.question.runId, optionId: 'A' });
+  const headersReceived = new Promise(resolve => f.server.once('request', resolve));
+  let slow;
+  const response = new Promise((resolve, reject) => {
+    slow = httpRequest(f.base + path, { method: 'POST', headers: {
+      'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload), Cookie: f.a,
+    } }, res => { res.resume(); res.on('end', () => resolve(res.statusCode)); });
+    slow.on('error', reject);
+    slow.setTimeout(5000, () => slow.destroy(new Error('Resposta parcial não concluiu')));
+  });
+  t.after(() => slow.destroy());
+  slow.write(payload.slice(0, 8));
+  await headersReceived;
+  f.advance(1000);
+  assert.equal((await f.command('answer', { questionRunId: state.value.question.runId, optionId: 'A' }, f.b, 'player')).res.status, 200);
+  f.advance(1000);
+  slow.end(payload.slice(8));
+  assert.equal(await response, 200);
+  assert.equal((await f.request(`/api/rooms/${f.roomId}/snapshot?view=player`, undefined, f.b)).value.result.personal.points, 100);
+  assert.equal((await f.request(`/api/rooms/${f.roomId}/snapshot?view=player`, undefined, f.a)).value.result.personal.points, 50);
 });

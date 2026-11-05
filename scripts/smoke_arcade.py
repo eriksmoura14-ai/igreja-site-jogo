@@ -72,7 +72,7 @@ try:
             room = urlparse(host.url).path.rsplit('/', 1)[1]
             rooms.append(room)
             host.get_by_label('Modo de pontuação').select_option('speed')
-            host.wait_for_function("!document.querySelector('#scoring-mode').disabled && document.querySelector('#scoring-mode').value === 'speed'")
+            host.wait_for_function("() => !document.querySelector('#scoring-mode').disabled && document.querySelector('#scoring-mode').value === 'speed'")
             assert state(room)['scoringMode'] == 'speed'
             host.evaluate('document.fonts.ready')
             assert host.evaluate("getComputedStyle(document.querySelector('.arcade-word')).fontFamily.includes('Press Start 2P')")
@@ -106,7 +106,7 @@ try:
                 player.wait_for_url(f'**/play/{room}')
                 player.get_by_role('img', name=f'Avatar de {name}', exact=True).wait_for()
                 players.append(player)
-            host.wait_for_function("document.querySelector('.lobby-bar h2')?.textContent.startsWith('3')")
+            host.wait_for_function("() => document.querySelector('.lobby-bar h2')?.textContent.startsWith('3')")
             assert [member['avatar'] for member in state(room)['players']] == [profile[2] for profile in profiles]
             host.screenshot(path=str(artifacts / 'arcade-lobby.png'), full_page=True)
             print('PASS: fonte Press Start 2P local, modo por ordem selecionado e três avatares personalizados no lobby.', flush=True)

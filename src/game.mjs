@@ -127,7 +127,9 @@ export class Game {
     const run = this.db.prepare('SELECT * FROM runs WHERE id=?').get(room.runId);
     if (!run || run.closed !== null) return;
     const q = room.quiz[room.index];
-    const answers = this.db.prepare('SELECT * FROM answers WHERE run_id=? ORDER BY received, rowid').all(run.id);
+    // A ordem de inserção corresponde à resposta completa aceita, não ao início
+    // de uma requisição cujo corpo poderia ser enviado lentamente.
+    const answers = this.db.prepare('SELECT * FROM answers WHERE run_id=? ORDER BY rowid').all(run.id);
     const totalCorrect = answers.filter(answer => answer.option_id === q.correctOptionId).length;
     let correctIndex = 0;
     for (const answer of answers) {
