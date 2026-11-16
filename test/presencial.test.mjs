@@ -55,6 +55,13 @@ test('HTTP presencial: criação padrão, cookie do telão, SSE filtrado e coman
   const host = auth.headers.get('set-cookie').split(';')[0];
   const created = await (await req('/api/rooms',{},host)).json(); const path=`/api/rooms/${created.roomId}`;
   const state = await (await req(path+'/snapshot?view=host',null,host)).json(); assert.equal(state.mode,'presencial');
+  const inviteResponse = await req(path+'/commands?view=host', {action:'display',requestId:randomUUID(),expectedVersion:state.version},host);
+  const invite = await inviteResponse.json();
+  assert.match(invite.displayQr, /^data:image\/png;base64,/);
+  assert.equal(new URL(invite.displayUrl).pathname, `/display/${created.roomId}`);
+  assert.equal(new URL(invite.displayUrl).hash.slice(1),invite.displayToken);
+  assert.equal(invite.displayUrl.includes(host.split('=')[1]),false);
+  created.displayToken = invite.displayToken;
   assert.equal((await req(path+'/snapshot?view=display')).status,401);
   assert.equal((await req(path+'/display-session',{token:'wrong'})).status,401);
   const session = await req(path+'/display-session',{token:created.displayToken});

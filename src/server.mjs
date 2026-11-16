@@ -151,12 +151,19 @@ export function createApp({ game, secureCookies = process.env.COOKIE_SECURE === 
         if (route === 'commands' && req.method === 'POST') {
           const input = await body(req);
           const result = game.command(roomId, actor, input.action, input, receivedAt);
-          publish(roomId); return json(res, 200, result);
+          publish(roomId);
+          if (input.action === 'display' && result.displayToken) {
+            const displayUrl = new URL(`/display/${roomId}`, publicOrigin || `${secureCookies ? 'https' : 'http'}://${req.headers.host}`);
+            displayUrl.hash = result.displayToken;
+            result.displayQr = await QRCode.toDataURL(displayUrl.href, { errorCorrectionLevel: 'M', margin: 4, width: 400 });
+            result.displayUrl = displayUrl.href;
+          }
+          return json(res, 200, result);
         }
       }
       if (url.pathname.startsWith('/api/')) throw new GameError(404, 'Rota não encontrada.');
       if (req.method !== 'GET') throw new GameError(405, 'Método não permitido.');
-      const files = { '/app.js': ['app.js', 'text/javascript'], '/motion.js': ['motion.js', 'text/javascript'], '/avatars.js': ['../shared/avatars.mjs', 'text/javascript'], '/arcade.js': ['arcade.js', 'text/javascript'], '/arcade.css': ['arcade.css', 'text/css'], '/styles.css': ['styles.css', 'text/css'], '/type-motion.css': ['type-motion.css', 'text/css'], '/mark.svg': ['mark.svg', 'image/svg+xml'], '/brand/despertos-wordmark.ffe9732aa666.png': ['brand/despertos-wordmark.ffe9732aa666.png', 'image/png'] };
+      const files = { '/immersive.css': ['immersive.css', 'text/css'], '/app.js': ['app.js', 'text/javascript'], '/motion.js': ['motion.js', 'text/javascript'], '/avatars.js': ['../shared/avatars.mjs', 'text/javascript'], '/arcade.js': ['arcade.js', 'text/javascript'], '/arcade.css': ['arcade.css', 'text/css'], '/styles.css': ['styles.css', 'text/css'], '/type-motion.css': ['type-motion.css', 'text/css'], '/mark.svg': ['mark.svg', 'image/svg+xml'], '/brand/despertos-wordmark.ffe9732aa666.png': ['brand/despertos-wordmark.ffe9732aa666.png', 'image/png'] };
       for (const name of ['press-start-2p-latin-400-normal', 'anton-latin-400-normal', 'montserrat-latin-700-normal', 'bebas-neue-latin-400-normal', 'poppins-latin-400-normal', 'poppins-latin-400-italic', 'poppins-latin-500-normal', 'poppins-latin-600-normal', 'poppins-latin-700-normal', 'poppins-latin-800-normal']) {
         files[`/fonts/${name}.woff2`] = [`fonts/${name}.woff2`, 'font/woff2'];
       }

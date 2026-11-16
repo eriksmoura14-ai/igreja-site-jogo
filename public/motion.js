@@ -114,6 +114,27 @@ export function animateRoom(snapshot, { sceneChanged = false, previous } = {}) {
     }
   }
 
+  if (snapshot.mode === 'presencial' && sceneChanged) {
+    animate(document.querySelector('.reveal-emblem, .victory-crown'), [{scale:'.45',rotate:'-20deg',opacity:0},{scale:'1.12',rotate:'5deg',opacity:1,offset:.7},{scale:'1',rotate:'0deg',opacity:1}], {duration:800});
+    enter(document.querySelector('.arena-kicker'));
+    enter(document.querySelector('.arena-victory h2'), 150);
+    if (snapshot.phase === 'QUESTION_RESULT' || snapshot.phase === 'ENDED') celebrate();
+  }
+  if (snapshot.mode === 'presencial' && previous?.roomId === snapshot.roomId) {
+    for (const team of snapshot.teams) {
+      const before = previous.teams.find(t => t.id === team.id);
+      if (!before || before.score === team.score) continue;
+      const row = document.querySelector(`[data-team-id="${CSS.escape(team.id)}"]`);
+      animate(row, [{translate:'0 0',filter:'brightness(1)'},{translate:'0 -5px',filter:'brightness(1.6)',offset:.4},{translate:'0 0',filter:'brightness(1)'}], {duration:650});
+      const number = row?.querySelector('.arena-score');
+      animate(number,[{scale:'1.5'},{scale:'1'}],{duration:550});
+      if (row && team.score > before.score && !reduced.matches) {
+        const burst = document.createElement('span'); burst.className='arena-point-burst'; burst.textContent='+1'; burst.setAttribute('aria-hidden','true');row.append(burst);
+        const effect = animate(burst,[{opacity:0,translate:'0 20px'},{opacity:1,translate:'0 0',offset:.3},{opacity:0,translate:'0 -30px'}],{duration:1100});
+        effect?.finished.then(()=>burst.remove(),()=>burst.remove());
+      }
+    }
+  }
   const rows = document.querySelectorAll('.ranking-row');
   if (rows.length) {
     const old = rankingMemory?.roomId === snapshot.roomId ? rankingMemory.teams : new Map();
@@ -122,7 +143,7 @@ export function animateRoom(snapshot, { sceneChanged = false, previous } = {}) {
       const last = old.get(id);
       const bar = row.querySelector('[data-width]');
       const width = Number(bar.dataset.width);
-      if (sceneChanged) {
+      if (sceneChanged || (snapshot.mode === 'presencial' && previous?.teams.some(t => t.id === id && t.score !== snapshot.teams.find(x => x.id === id)?.score))) {
         const distance = last ? (last.index - index) * (row.getBoundingClientRect().height + 13) : 18;
         animate(row, [{ opacity: .35, translate: `0 ${distance}px` }, { opacity: 1, translate: '0 0' }], { duration: 600, delay: index * 55, fill: 'backwards' });
         animate(bar, [{ width: `${last?.width || 0}%` }, { width: `${width}%` }], { duration: 750, delay: index * 55 });

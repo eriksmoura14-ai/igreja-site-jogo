@@ -6,7 +6,7 @@ Modo presencial: somente o organizador controla a partida. As 50 perguntas e as 
 
 1. Abra `/host`, entre ou crie sua conta e clique em **Criar partida**.
 2. Escolha de **duas a quatro equipes**, personalize os nomes (2 a 24 caracteres, sem repetição) e clique em **Salvar equipes**.
-3. Clique em **Gerar novo link do telão** e depois em **Abrir telão**. Abra esse link no computador do projetor. Ele concede somente visualização; gerar outro link revoga o anterior. Recarregar o telão conserva o acesso por cookie.
+3. Expanda **Conectar o telão** e clique em **Gerar novo link do telão**. Escaneie o QR code, use **Copiar link** ou clique em **Abrir telão**. Abra esse link no computador do projetor. Ele concede somente visualização; gerar outro link revoga o anterior. Recarregar o telão conserva o acesso por cookie.
 4. Inicie o desafio. As equipes respondem presencialmente; o organizador decide quando **Revelar resposta**. Não há fechamento automático por tempo neste modo.
 5. Marque as equipes que acertaram: cada uma recebe **um ponto por pergunta**, independentemente da dificuldade. Clique novamente para desfazer um lançamento antes de avançar. Repetições de envio não duplicam pontos.
 6. Veja a classificação e avance à próxima pergunta. Empates compartilham a colocação. Após as 50 perguntas, finalize para ver a classificação final.
@@ -52,3 +52,11 @@ Sessões do organizador e do telão usam cookies HttpOnly. O link do telão cont
 - `public/app.js`: organizador e telão; estilos, fontes e marca originais preservados.
 - `test/presencial.test.mjs`: testes do modo presencial.
 - `docs/visual-reference.md`: referências visuais existentes.
+
+## Visual e animações presenciais
+
+A arena mantém as cores, fontes e perguntas originais, com luzes de fundo, anéis na contagem regressiva, alternativas em sequência, revelação com confetes, destaque de +1 e barras animadas no ranking e celebração final. O telão organiza os placares em duas colunas nas telas grandes. Os controles continuam disponíveis durante os efeitos. A preferência do sistema por movimento reduzido desativa animações e confetes.
+
+O QR code é gerado localmente no servidor e abre a mesma visualização de leitura do link. O painel mantém QR e link durante as mudanças de fase na mesma aba; após recarregar o painel, gere um novo convite se precisar compartilhar novamente. O telão já aberto mantém sua sessão, exceto quando um novo link é gerado e revoga o anterior. Nenhum serviço externo recebe o convite.
+
+O teste opcional `python3 scripts/smoke_immersive.py` usa Playwright Python, Chromium, Pillow e `zxing-cpp`, com o servidor local na porta 3000 e banco de teste. Decodifica o QR realmente renderizado, abre a visualização em outra sessão, verifica a área de transferência, sincronização, layout mobile/Full HD, movimento reduzido e encerramento. As capturas ficam em `/tmp/immersive-*.png`.
