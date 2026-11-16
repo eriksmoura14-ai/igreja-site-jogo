@@ -61,20 +61,16 @@ function bindJoin() {
   });
 }
 function landing() {
-  shell(`<main class="landing"><section class="hero"><div class="eyebrow"><span class="live-dot"></span> UM DESAFIO. QUATRO EQUIPES. UM PROPÓSITO.</div><div class="hero-wordmark"><img class="hero-crown" src="/mark.svg" alt="" width="84" height="70"><h1><span class="sr-only">DESPERTOS</span><img class="hero-lettering" src="/brand/despertos-wordmark.ffe9732aa666.png" width="2142" height="734" alt="" decoding="async" fetchpriority="high"></h1><div>DESAFIO BÍBLICO</div></div><h2>Conheça a Palavra.<br>Viva o <em>propósito.</em></h2><p class="hero-description">Sua fé em ação. Sua equipe em sintonia.<br>Prepare-se para um desafio que vai além das respostas.</p><div class="hero-stats"><div><strong>50</strong><span>PERGUNTAS</span></div><div><strong>04</strong><span>EQUIPES</span></div><div><strong>01</strong><span>PROPÓSITO</span></div></div><blockquote>“Lâmpada para os meus pés é a tua palavra,<br>e luz para o meu caminho.”<cite>SALMOS 119:105</cite></blockquote><div class="hero-outline" aria-hidden="true">✧</div></section><section class="entry-card"><div class="card-topline"><span>O DESAFIO COMEÇA AQUI</span>${icon('phone')}</div><h2>Pronto para despertar?</h2><p>Entre com o PIN e venha jogar com sua equipe.</p>${joinForm()}</section></main><section class="how-section"><div class="section-intro"><span class="eyebrow orange">SIMPLES DE JOGAR. DIFÍCIL DE ESQUECER.</span><h2>Como funciona<span class="orange">?</span></h2></div><div class="how-grid">${[['people', 'Forme sua equipe', 'Escolha um dos quatro times e una forças.'], ['phone', 'Responda no celular', 'Quatro alternativas. Uma resposta. 30 segundos.'], ['trophy', 'Acumule pontos', 'Cada acerto soma pontos para toda a equipe.'], ['crown', 'Vença o desafio', 'Conhecimento e união levam ao topo.']].map(([ico, title, text], i) => `<article><div class="step-icon">${icon(ico)}<b>0${i + 1}</b></div><h3>${title}</h3><p>${text}</p></article>`).join('')}</div></section><section class="difficulty-strip">${icon('book')}<div><strong>Cada pergunta, um novo desafio.</strong><span>50 perguntas bíblicas, do primeiro passo à grande descoberta.</span></div><div class="level easy">FÁCIL <b>10</b><small>100 pts</small></div><div class="level medium">MÉDIO <b>25</b><small>200 pts</small></div><div class="level hard">DIFÍCIL <b>15</b><small>300 pts</small></div></section>`);
-  bindJoin();
+  shell(`<main class="auth-page"><section><span class="eyebrow orange">DESAFIO PRESENCIAL</span><h1>Conheça a Palavra.<br><em>Jogue em equipe.</em></h1><p>50 perguntas · 2 a 4 equipes · 1 ponto por acerto.</p><p>As equipes respondem presencialmente. O organizador conduz as perguntas e registra os acertos. O telão acompanha ao vivo.</p></section><section class="entry-card"><h2>Prepare o desafio</h2><a class="button primary full" href="/host">Painel do organizador →</a></section></main>`);
 }
-function joinPage() {
-  shell(`<main class="join-page"><div class="section-intro"><span class="eyebrow orange">SEU CELULAR É SEU CONTROLE</span><h1>Encontre sua equipe.<br>Entre no <em>desafio.</em></h1></div><section class="entry-card"><h2>Vamos jogar?</h2><p>Use o PIN que está na tela do anfitrião.</p>${joinForm()}</section></main>`, { player: true });
-  bindJoin();
-}
+function joinPage() { landing(); }
 let authMode = 'login';
 async function hostHome() {
   let me;
   try { me = await api('/api/auth/me'); }
   catch (error) { if (error.status !== 401) toast(error.message); }
   if (!me) return authPage();
-  shell(`<main class="dashboard"><div class="eyebrow orange">PAINEL DO ANFITRIÃO</div><div class="dashboard-heading"><div><h1>Seu palco. <em>O nosso desafio.</em></h1><p>Olá, ${esc(me.account.username)}. Reúna as equipes e dê início ao jogo.</p></div><button id="logout" class="button quiet">Sair da conta</button></div><section class="create-card"><div class="large-crown">${icon('crown')}</div><div><span class="eyebrow">DESPERTOS • EDIÇÃO BÍBLICA</span><h2>Uma nova partida,<br>um novo propósito.</h2><p>50 perguntas · 4 equipes · Até 16 participantes</p><p class="muted">Os participantes entram pelo PIN. Você controla o ritmo.</p></div><button id="create-room" class="button primary">Criar partida ${icon('arrow')}</button></section><section class="rooms-section"><h2>Suas partidas</h2>${me.rooms.length ? me.rooms.map(r => `<a class="room-row" href="/host/${r.id}"><div>${icon('crown')}<span><strong>${r.pin ? `Sala ${esc(r.pin)}` : 'Partida encerrada'}</strong><small>${new Date(r.created).toLocaleDateString('pt-BR')}</small></span></div><span class="badge">${phaseName(r.phase)}</span>${icon('arrow')}</a>`).join('') : '<div class="empty-state">Sua primeira história começa com uma nova partida.</div>'}</section></main>`, { host: true, nav: '<span class="host-tag">CONTROLE DO ANFITRIÃO</span>' });
+  shell(`<main class="dashboard"><div class="eyebrow orange">PAINEL DO ANFITRIÃO</div><div class="dashboard-heading"><div><h1>Seu palco. <em>O nosso desafio.</em></h1><p>Olá, ${esc(me.account.username)}. Reúna as equipes e dê início ao jogo.</p></div><button id="logout" class="button quiet">Sair da conta</button></div><section class="create-card"><div class="large-crown">${icon('crown')}</div><div><span class="eyebrow">DESPERTOS • EDIÇÃO BÍBLICA</span><h2>Uma nova partida,<br>um novo propósito.</h2><p>50 perguntas · 2 a 4 equipes · Modo presencial</p><p class="muted">Defina os nomes das equipes e abra o telão. Você controla o ritmo.</p></div><button id="create-room" class="button primary">Criar partida ${icon('arrow')}</button></section><section class="rooms-section"><h2>Suas partidas</h2>${me.rooms.length ? me.rooms.map(r => `<a class="room-row" href="/host/${r.id}"><div>${icon('crown')}<span><strong>${r.pin ? `Sala ${esc(r.pin)}` : 'Partida encerrada'}</strong><small>${new Date(r.created).toLocaleDateString('pt-BR')}</small></span></div><span class="badge">${phaseName(r.phase)}</span>${icon('arrow')}</a>`).join('') : '<div class="empty-state">Sua primeira história começa com uma nova partida.</div>'}</section></main>`, { host: true, nav: '<span class="host-tag">CONTROLE DO ANFITRIÃO</span>' });
   document.querySelector('#logout').onclick = async () => { await api('/api/auth/logout', {}); hostHome(); };
   document.querySelector('#create-room').onclick = async e => {
     e.currentTarget.disabled = true;
@@ -83,7 +79,7 @@ async function hostHome() {
   };
 }
 function authPage() {
-  shell(`<main class="auth-page"><section><span class="eyebrow orange">QUEM CONDUZ TAMBÉM INSPIRA.</span><h1>Prepare o palco.<br><em>Desperte sua galera.</em></h1><p>Crie uma sala, compartilhe o PIN e acompanhe cada conquista das equipes.</p><div class="auth-art">${icon('crown')}</div></section><section class="entry-card"><div class="auth-tabs"><button data-mode="login" class="${authMode === 'login' ? 'active' : ''}">Entrar</button><button data-mode="register" class="${authMode === 'register' ? 'active' : ''}">Criar conta</button></div><h2>${authMode === 'login' ? 'Bem-vindo de volta.' : 'Vamos começar?'}</h2><p>Sua conta guarda o controle das suas partidas.</p><form id="auth-form"><label for="username">NOME DO ANFITRIÃO</label><input id="username" name="username" required pattern="[a-zA-Z0-9_.-]{3,32}" minlength="3" maxlength="32" autocomplete="username" placeholder="Seu usuário"><label for="password">SENHA</label><input id="password" name="password" type="password" required minlength="10" maxlength="128" autocomplete="${authMode === 'login' ? 'current-password' : 'new-password'}" placeholder="Pelo menos 10 caracteres"><button class="button primary full">${authMode === 'login' ? 'Entrar como anfitrião' : 'Criar minha conta'} ${icon('arrow')}</button></form><a class="back-link" href="/join">Quero participar de um jogo</a></section></main>`, { host: true });
+  shell(`<main class="auth-page"><section><span class="eyebrow orange">QUEM CONDUZ TAMBÉM INSPIRA.</span><h1>Prepare o palco.<br><em>Desperte sua galera.</em></h1><p>Crie uma partida, organize as equipes e acompanhe cada conquista.</p><div class="auth-art">${icon('crown')}</div></section><section class="entry-card"><div class="auth-tabs"><button data-mode="login" class="${authMode === 'login' ? 'active' : ''}">Entrar</button><button data-mode="register" class="${authMode === 'register' ? 'active' : ''}">Criar conta</button></div><h2>${authMode === 'login' ? 'Bem-vindo de volta.' : 'Vamos começar?'}</h2><p>Sua conta guarda o controle das suas partidas.</p><form id="auth-form"><label for="username">NOME DO ANFITRIÃO</label><input id="username" name="username" required pattern="[a-zA-Z0-9_.-]{3,32}" minlength="3" maxlength="32" autocomplete="username" placeholder="Seu usuário"><label for="password">SENHA</label><input id="password" name="password" type="password" required minlength="10" maxlength="128" autocomplete="${authMode === 'login' ? 'current-password' : 'new-password'}" placeholder="Pelo menos 10 caracteres"><button class="button primary full">${authMode === 'login' ? 'Entrar como anfitrião' : 'Criar minha conta'} ${icon('arrow')}</button></form><a class="back-link" href="/">Sobre o jogo presencial</a></section></main>`, { host: true });
   document.querySelectorAll('[data-mode]').forEach(b => { b.onclick = () => { authMode = b.dataset.mode; authPage(); }; });
   document.querySelector('#auth-form').onsubmit = async e => {
     e.preventDefault(); const button = e.target.querySelector('button'); button.disabled = true;
@@ -157,6 +153,41 @@ function playerView(s) {
   shell(`<main class="player-main">${top}${content}</main>`, { player: true, motion: false, nav: '<span class="player-tag">SEU CONTROLE</span>' });
   document.querySelectorAll('[data-answer]').forEach(b => { b.onclick = () => command('answer', { optionId: b.dataset.answer, questionRunId: s.question.runId }); });
 }
+function presencialView(s) {
+  const host = s.role === 'host';
+  const button = (action, text) => host ? `<button class="button primary" data-command="${action}">${text}</button>` : '';
+  const scores = `<div class="ranking-list">${s.teams.map(t => `<article data-team-id="${t.id}" class="ranking-row team-${t.id}"><strong class="rank-number">${t.rank}º</strong>${icon(t.id)}<div class="ranking-info"><strong>${esc(t.name)}</strong><p>${t.score} ponto${t.score === 1 ? '' : 's'}</p><div class="score-track"><span data-width="${s.teams[0].score ? Math.round(100*t.score/s.teams[0].score) : 0}"></span></div></div></article>`).join('')}</div>`;
+  let content = '';
+  if (s.phase === 'LOBBY') {
+    const ordered = [...s.teams].sort((a, b) => a.order - b.order);
+    content = `<h1>Reúna suas equipes.</h1><p>Respondam presencialmente. Cada acerto vale um ponto, registrado pelo organizador.</p>${host ? `<form id="teams-form"><label for="team-count">QUANTIDADE DE EQUIPES</label><select id="team-count">${[2,3,4].map(n => `<option ${n === ordered.length ? 'selected' : ''}>${n}</option>`).join('')}</select><div id="team-names">${Array.from({length:4}, (_, i) => `<label class="team-${catalog[i].id}" ${i >= ordered.length ? 'hidden' : ''}>EQUIPE ${i+1}<input name="teamName" minlength="2" maxlength="24" value="${esc(ordered[i]?.name || catalog[i].name)}" ${i >= ordered.length ? 'disabled' : ''} required></label>`).join('')}</div><button class="button quiet">Salvar equipes</button></form><p>Salve os nomes antes de iniciar.</p>${button('start', 'Iniciar desafio →')}` : scores + '<p>Aguarde o organizador iniciar.</p>'}`;
+  } else if (s.phase === 'COUNTDOWN') {
+    content = `<section class="countdown-screen"><h1>Equipes, preparem-se!</h1><div id="countdown" class="countdown-number">3</div></section>`;
+  } else if (s.phase === 'QUESTION_OPEN') {
+    content = `<div class="question-meta">PERGUNTA ${s.questionNumber} / ${s.totalQuestions} ${difficulty(s.question)}<span>1 PONTO POR ACERTO</span></div><section class="host-question"><h1>${esc(s.question.text)}</h1><div class="answer-grid">${s.question.options.map(o => `<div class="answer-option option-${o.id}"><b>${o.id}</b><span>${esc(o.text)}</span></div>`).join('')}</div><p>As equipes respondem presencialmente.</p>${button('close', 'Revelar resposta')}</section>`;
+  } else if (s.phase === 'QUESTION_RESULT') {
+    const o = s.question.options.find(o => o.id === s.result.correctOptionId);
+    content = `<section class="result-screen"><h1>Resposta correta</h1><p>${esc(s.question.text)}</p><div class="correct-answer"><b>${o.id}</b><strong>${esc(o.text)}</strong></div><blockquote>${esc(s.result.explanation)}<cite>${esc(s.result.reference)}</cite></blockquote></section>${host ? `<h2>Quais equipes acertaram?</h2><p>Marque cada equipe que acertou. Desmarque para corrigir um lançamento.</p><div class="lobby-teams">${s.teams.map(t => `<button class="button team-${t.id}" data-award="${t.id}" aria-pressed="${s.awardedTeams.includes(t.id)}">${esc(t.name)}: ${s.awardedTeams.includes(t.id) ? '✓ +1 registrado · desfazer' : '+1 ponto'}</button>`).join('')}</div>${button('next', 'Ver classificação →')}` : ''}${scores}`;
+  } else {
+    content = `<h1>${s.phase === 'ENDED' ? 'Classificação final' : 'Classificação'}</h1>${scores}${s.phase === 'ENDED' ? (host ? '<a class="button primary" href="/host">Nova partida</a>' : '<p>Partida encerrada.</p>') : button('next', s.questionNumber === s.totalQuestions ? 'Finalizar desafio' : 'Próxima pergunta →')}`;
+  }
+  shell(`<main class="game-main"><div class="game-top"><span class="host-tag">${host ? 'CONTROLE DO ORGANIZADOR' : 'TELÃO · SOMENTE VISUALIZAÇÃO'}</span><span id="connection" class="connection">Conectado</span></div>${host && s.phase !== 'ENDED' ? '<button class="button quiet" id="generate-display">Gerar novo link do telão</button><a id="display-link" class="button quiet" target="_blank" rel="noopener" hidden>Abrir telão →</a><p class="form-note">Gerar outro link revoga o acesso anterior ao telão.</p>' : ''}${content}${host && s.phase !== 'ENDED' ? '<button class="end-game" id="end-presencial">Encerrar partida</button>' : ''}</main>`, {host, motion:false, nav:'<span class="nav-note">DESAFIO PRESENCIAL</span>'});
+  document.querySelectorAll('[data-command]').forEach(b => { b.onclick = () => command(b.dataset.command); });
+  document.querySelectorAll('[data-award]').forEach(b => { b.onclick = () => command('award', { teamId:b.dataset.award, correct: !s.awardedTeams.includes(b.dataset.award), questionRunId:s.question.runId }); });
+  document.querySelector('#generate-display')?.addEventListener('click', async () => {
+    // O link é entregue somente ao organizador; o fragmento não é enviado no GET.
+    try {
+      const result = await api(`/api/rooms/${s.roomId}/commands?view=host`, {action:'display', expectedVersion:s.version, requestId:crypto.randomUUID()});
+      const fresh = await api(`/api/rooms/${s.roomId}/snapshot?view=host`); render(fresh);
+      const link = document.querySelector('#display-link'); link.href = `/display/${s.roomId}#${result.displayToken}`; link.hidden = false;
+    } catch (error) { toast(error.message); }
+  });
+  document.querySelector('#end-presencial')?.addEventListener('click', () => { if (confirm('Encerrar a partida e manter os pontos registrados?')) command('end'); });
+  document.querySelector('#team-count')?.addEventListener('change', e => {
+    document.querySelectorAll('#team-names label').forEach((label, i) => { label.hidden = i >= Number(e.target.value); label.querySelector('input').disabled = label.hidden; });
+  });
+  document.querySelector('#teams-form')?.addEventListener('submit', e => { e.preventDefault(); command('teams', {names:[...new FormData(e.target).getAll('teamName')]}); });
+}
 function render(s) {
   if (current && s.sequence < current.sequence) return;
   const previous = current;
@@ -167,7 +198,7 @@ function render(s) {
   const focusId = document.activeElement?.id;
   const keepDialog = previous?.phase === s.phase && document.querySelector('#end-dialog')?.open;
   current = s; offset = s.serverTime - Date.now();
-  s.role === 'host' ? hostView(s) : playerView(s);
+  s.mode === 'presencial' ? presencialView(s) : s.role === 'host' ? hostView(s) : playerView(s);
   document.querySelectorAll('[data-width]').forEach(el => { el.style.width = `${el.dataset.width}%`; });
   updateTime();
   if (keepDialog) document.querySelector('#end-dialog')?.showModal();
@@ -198,7 +229,11 @@ async function command(action, extra = {}) {
   const controls = [...document.querySelectorAll('[data-answer], [data-command], #lock, #confirm-end, #scoring-mode')].filter(button => !button.disabled);
   controls.forEach(button => { button.disabled = true; });
   try {
-    await api(`/api/rooms/${current.roomId}/commands?view=${current.role}`, payload);
+    const result = await api(`/api/rooms/${current.roomId}/commands?view=${current.role}`, payload);
+    if (result.displayToken) {
+      const link = document.querySelector('#display-link');
+      if (link) { link.href = `/display/${current.roomId}#${result.displayToken}`; link.hidden = false; }
+    }
     pendingCommand = null;
     const fresh = await api(`/api/rooms/${current.roomId}/snapshot?view=${current.role}`); render(fresh);
   } catch (error) {
@@ -215,6 +250,10 @@ async function command(action, extra = {}) {
 async function roomPage(role, id) {
   shell('<main class="loading-screen"><span class="waiting-pill"><i></i> CONECTANDO AO DESAFIO</span></main>');
   try {
+    if (role === 'display' && location.hash) {
+      const token = location.hash.slice(1); history.replaceState(null, '', location.pathname);
+      await api(`/api/rooms/${id}/display-session`, { token });
+    }
     render(await api(`/api/rooms/${id}/snapshot?view=${role}`));
     stream = new EventSource(`/api/rooms/${id}/events?view=${role}`);
     stream.addEventListener('snapshot', e => render(JSON.parse(e.data)));
@@ -235,8 +274,8 @@ app.addEventListener('pointerdown', event => {
   if (button && !button.disabled) animateTap(button);
 });
 const path = location.pathname;
-const room = path.match(/^\/(host|play)\/([a-f0-9-]{36})$/);
-if (room) roomPage(room[1] === 'host' ? 'host' : 'player', room[2]);
+const room = path.match(/^\/(host|play|display)\/([a-f0-9-]{36})$/);
+if (room) roomPage(room[1] === 'display' ? 'display' : room[1] === 'host' ? 'host' : 'player', room[2]);
 else if (path === '/host') hostHome();
 else if (path === '/join') joinPage();
 else landing();

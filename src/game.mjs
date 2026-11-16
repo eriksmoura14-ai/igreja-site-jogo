@@ -27,6 +27,7 @@ export class Game {
       CREATE TABLE IF NOT EXISTS points (run_id TEXT NOT NULL REFERENCES runs(id) ON DELETE CASCADE, player_id TEXT NOT NULL REFERENCES players(id), points INTEGER NOT NULL, correct INTEGER NOT NULL, elapsed INTEGER NOT NULL, PRIMARY KEY(run_id, player_id));
       CREATE TABLE IF NOT EXISTS receipts (room_id TEXT NOT NULL REFERENCES rooms(id) ON DELETE CASCADE, actor TEXT NOT NULL, request_id TEXT NOT NULL, fingerprint TEXT NOT NULL, result TEXT NOT NULL, PRIMARY KEY(room_id, actor, request_id));
       CREATE TABLE IF NOT EXISTS events (sequence INTEGER PRIMARY KEY AUTOINCREMENT, room_id TEXT NOT NULL REFERENCES rooms(id) ON DELETE CASCADE, version INTEGER NOT NULL, kind TEXT NOT NULL, created INTEGER NOT NULL);
+      CREATE TABLE IF NOT EXISTS manual_points (room_id TEXT NOT NULL REFERENCES rooms(id) ON DELETE CASCADE, run_id TEXT NOT NULL REFERENCES runs(id) ON DELETE CASCADE, team TEXT NOT NULL, PRIMARY KEY(run_id, team));
       CREATE INDEX IF NOT EXISTS players_room ON players(room_id);
       CREATE INDEX IF NOT EXISTS runs_room ON runs(room_id);
       CREATE INDEX IF NOT EXISTS events_room ON events(room_id, sequence);
@@ -70,7 +71,16 @@ export class Game {
     if (!row) fail(404, 'Sala não encontrada.');
     return { scoringMode: 'fixed', ...JSON.parse(row.state), hostId: row.host_id, pin: row.pin };
   }
+  authenticateDisplay(token, roomId) {
+    const room = this.room(roomId);
+    if (!token || !room.displayHash || hash(token) !== room.displayHash) fail(401, 'Acesso ao telão inválido.');
+    return { role: 'display', id: roomId, roomId, displayHash: room.displayHash };
+  }
   authorize(room, actor, hostOnly = false) {
+    if (actor?.role === 'display') {
+      if (hostOnly || actor.roomId !== room.id || actor.displayHash !== room.displayHash) fail(403, 'O telão é somente para visualização.');
+      return;
+    }
     if (!actor || (actor.role === 'host' && actor.id !== room.hostId) || (actor.role === 'player' && (hostOnly || actor.roomId !== room.id))) fail(403, 'Você não tem permissão nesta sala.');
     if (actor.role === 'player' && !this.db.prepare('SELECT id FROM players WHERE id=? AND room_id=? AND removed=0').get(actor.id, room.id)) fail(403, 'Participação removida.');
     if (!['host', 'player'].includes(actor.role)) fail(403, 'Acesso negado.');
@@ -81,7 +91,7 @@ export class Game {
     this.db.prepare('UPDATE rooms SET state=?, pin=? WHERE id=?').run(JSON.stringify(state), pin, room.id);
     this.db.prepare('INSERT INTO events(room_id, version, kind, created) VALUES (?, ?, ?, ?)').run(room.id, room.version, kind, this.now());
   }
-  create(actor) {
+  create(actor, { mode = 'online' } = {}) {
     if (actor?.role !== 'host' || !this.account(actor.id)) fail(401, 'Entre como anfitrião.');
     return this.tx(() => {
       if (this.db.prepare('SELECT count(*) AS n FROM rooms WHERE host_id=? AND pin IS NOT NULL').get(actor.id).n >= 5) fail(429, 'Encerre uma sala antes de criar outra.');
@@ -92,10 +102,11 @@ export class Game {
         if (!this.db.prepare('SELECT id FROM rooms WHERE pin=?').get(candidate)) { pin = candidate; break; }
       }
       if (!pin) fail(503, 'Não foi possível reservar um PIN. Tente novamente.');
-      const room = { id: randomUUID(), hostId: actor.id, pin, phase: 'LOBBY', scoringMode: 'fixed', version: 0, locked: false, index: -1, quizVersion, quiz: this.quiz, countdownAt: null, runId: null, created: this.now() };
+      const displayToken = secret();
+      const room = { mode, teamConfig: teams.map(t => ({ ...t })), displayHash: hash(displayToken), id: randomUUID(), hostId: actor.id, pin, phase: 'LOBBY', scoringMode: 'fixed', version: 0, locked: false, index: -1, quizVersion, quiz: this.quiz, countdownAt: null, runId: null, created: this.now() };
       this.db.prepare('INSERT INTO rooms VALUES (?, ?, ?, ?, ?)').run(room.id, pin, actor.id, JSON.stringify(room), this.now() + DAY);
       this.save(room, 'room.created');
-      return { roomId: room.id };
+      return { roomId: room.id, ...(mode === 'presencial' ? { displayToken } : {}) };
     });
   }
   join(pin, name, team, avatar = defaultAvatar) {
@@ -108,6 +119,7 @@ export class Game {
       const found = this.db.prepare('SELECT id FROM rooms WHERE pin=? AND expires>?').get(pin, this.now());
       if (!found) fail(404, 'PIN não encontrado ou partida encerrada.');
       const room = this.room(found.id);
+      if (room.mode === 'presencial') fail(403, 'Partida presencial: somente o organizador controla.');
       if (room.locked || room.phase !== 'LOBBY') fail(409, 'As entradas estão fechadas. Aguarde uma nova partida.');
       if (this.db.prepare('SELECT count(*) AS n FROM players WHERE room_id=? AND team=? AND removed=0').get(room.id, team).n >= 4) fail(409, 'Equipe completa. Escolha outra equipe.');
       if (this.db.prepare('SELECT id FROM players WHERE room_id=? AND lower(name)=lower(?)').get(room.id, name)) fail(409, 'Este nome já foi usado nesta sala. Escolha outro.');
@@ -154,7 +166,7 @@ export class Game {
         if (row.expires <= at) { room.phase = 'ENDED'; room.pin = null; room.locked = true; dirty = true; }
         else {
           if (room.phase === 'COUNTDOWN' && room.countdownAt <= at) { this.open(room, room.countdownAt); dirty = true; }
-          if (room.phase === 'QUESTION_OPEN') {
+          if (room.phase === 'QUESTION_OPEN' && room.mode !== 'presencial') {
             const run = this.db.prepare('SELECT deadline FROM runs WHERE id=?').get(room.runId);
             if (run.deadline <= at) { this.finishQuestion(room, run.deadline); dirty = true; }
           }
@@ -168,6 +180,8 @@ export class Game {
     return this.tx(() => {
       const room = this.room(roomId);
       this.authorize(room, actor, action !== 'answer');
+      if (actor.role === 'display') fail(403, 'O telão é somente para visualização.');
+      if (room.mode === 'presencial' && ['answer', 'lock', 'remove'].includes(action)) fail(403, 'Somente o organizador controla esta partida presencial.');
       if (!body || typeof body.requestId !== 'string' || !/^[\w-]{16,80}$/.test(body.requestId)) fail(400, 'Identificador de comando inválido.');
       const fingerprint = hash(JSON.stringify({ action, body }));
       const old = this.db.prepare('SELECT * FROM receipts WHERE room_id=? AND actor=? AND request_id=?').get(roomId, actor.id, body.requestId);
@@ -199,7 +213,7 @@ export class Game {
         if (room.phase === 'ENDED' && action !== 'end') fail(409, 'A partida já terminou.');
         if (action === 'start') {
           if (room.phase !== 'LOBBY') fail(409, 'A partida já foi iniciada.');
-          if (!this.db.prepare('SELECT id FROM players WHERE room_id=? AND removed=0').get(roomId)) fail(409, 'Espere pelo menos um participante entrar.');
+          if (room.mode !== 'presencial' && !this.db.prepare('SELECT id FROM players WHERE room_id=? AND removed=0').get(roomId)) fail(409, 'Espere pelo menos um participante entrar.');
           room.index = 0; room.phase = 'COUNTDOWN'; room.locked = true; room.countdownAt = this.now() + this.countdownMs;
         } else if (action === 'next') {
           if (room.phase === 'QUESTION_RESULT') room.phase = 'LEADERBOARD';
@@ -210,7 +224,22 @@ export class Game {
         } else if (action === 'close') {
           if (room.phase !== 'QUESTION_OPEN') fail(409, 'Não há pergunta aberta.');
           this.finishQuestion(room, this.now());
+        } else if (action === 'award') {
+          if (room.mode !== 'presencial' || room.phase !== 'QUESTION_RESULT' || body.questionRunId !== room.runId) fail(409, 'Registre acertos após revelar a resposta da pergunta atual.');
+          if (!room.teamConfig.some(t => t.id === body.teamId) || typeof body.correct !== 'boolean') fail(400, 'Equipe ou acerto inválido.');
+          if (body.correct) this.db.prepare('INSERT OR IGNORE INTO manual_points VALUES (?, ?, ?)').run(roomId, room.runId, body.teamId);
+          else this.db.prepare('DELETE FROM manual_points WHERE room_id=? AND run_id=? AND team=?').run(roomId, room.runId, body.teamId);
+        } else if (action === 'teams') {
+          if (room.mode !== 'presencial' || room.phase !== 'LOBBY') fail(409, 'Configure as equipes antes de iniciar.');
+          if (!Array.isArray(body.names) || body.names.length < 2 || body.names.length > 4) fail(400, 'Escolha de duas a quatro equipes.');
+          const names = body.names.map(name => typeof name === 'string' ? name.normalize('NFKC').trim().replace(/\s+/g, ' ') : '');
+          if (names.some(name => name.length < 2 || name.length > 24 || /[\p{Cc}\p{Cf}]/u.test(name)) || new Set(names.map(n => n.toLocaleLowerCase('pt-BR'))).size !== names.length) fail(400, 'Use nomes diferentes de 2 a 24 caracteres.');
+          room.teamConfig = names.map((name, i) => ({ ...teams[i], name }));
+        } else if (action === 'display') {
+          if (room.mode !== 'presencial') fail(409, 'Telão disponível no modo presencial.');
+          const token = secret(); room.displayHash = hash(token); result = { accepted: true, displayToken: token };
         } else if (action === 'settings') {
+          if (room.mode === 'presencial') fail(409, 'Cada acerto vale um ponto manual.');
           if (room.phase !== 'LOBBY') fail(409, 'Escolha a pontuação antes de iniciar a partida.');
           if (!['fixed', 'speed'].includes(body.scoringMode)) fail(400, 'Modo de pontuação inválido.');
           room.scoringMode = body.scoringMode;
@@ -233,15 +262,20 @@ export class Game {
     const room = this.room(roomId); this.authorize(room, actor);
     const members = this.db.prepare('SELECT id, name, team, avatar FROM players WHERE room_id=? AND removed=0 ORDER BY joined, rowid').all(roomId)
       .map(player => ({ ...player, avatar: normalizeAvatar(JSON.parse(player.avatar)) }));
-    const ranking = teams.map((team, i) => {
+    const ranking = (room.mode === 'presencial' ? room.teamConfig : teams).map((team, i) => {
       const totals = this.db.prepare('SELECT coalesce(sum(s.points),0) AS score, coalesce(sum(s.correct),0) AS correct FROM points s JOIN players p ON p.id=s.player_id WHERE p.room_id=? AND p.team=?').get(roomId, team.id);
-      return { ...team, ...totals, order: i, count: members.filter(p => p.team === team.id).length };
+      if (room.mode === 'presencial') { const n = this.db.prepare('SELECT count(*) AS n FROM manual_points WHERE room_id=? AND team=?').get(roomId, team.id).n; totals.score = n; totals.correct = n; }
+      return { ...team, ...totals, order: i, count: room.mode === 'presencial' ? 1 : members.filter(p => p.team === team.id).length };
     }).sort((a, b) => b.score - a.score || b.correct - a.correct || a.order - b.order).map((t, i, all) => ({ ...t, rank: all.findIndex(x => x.score === t.score && x.correct === t.correct) + 1 }));
     const sequence = this.db.prepare('SELECT max(sequence) AS n FROM events WHERE room_id=?').get(roomId).n || 0;
-    const view = { roomId, role: actor.role, phase: room.phase, scoringMode: room.scoringMode, version: room.version, sequence, serverTime: this.now(), locked: room.locked, questionNumber: room.index + 1, totalQuestions: room.quiz.length, teams: ranking, countdownAt: room.countdownAt };
+    const view = { mode: room.mode || 'online', roomId, role: actor.role, phase: room.phase, scoringMode: room.scoringMode, version: room.version, sequence, serverTime: this.now(), locked: room.locked, questionNumber: room.index + 1, totalQuestions: room.quiz.length, teams: ranking, countdownAt: room.countdownAt };
     if (actor.role === 'host') { view.pin = room.pin; view.players = members; }
-    else { view.me = members.find(p => p.id === actor.id); }
-    view.allowedActions = actor.role === 'player' ? [] : room.phase === 'LOBBY' ? ['start', 'settings', 'lock', 'remove', 'end'] : room.phase === 'QUESTION_OPEN' ? ['close', 'end'] : ['QUESTION_RESULT', 'LEADERBOARD'].includes(room.phase) ? ['next', 'end'] : room.phase === 'COUNTDOWN' ? ['end'] : [];
+    else if (actor.role === 'player') { view.me = members.find(p => p.id === actor.id); }
+    view.allowedActions = actor.role !== 'host' ? [] : room.phase === 'LOBBY' ? ['start', 'settings', 'lock', 'remove', 'end'] : room.phase === 'QUESTION_OPEN' ? ['close', 'end'] : ['QUESTION_RESULT', 'LEADERBOARD'].includes(room.phase) ? ['next', 'end'] : room.phase === 'COUNTDOWN' ? ['end'] : [];
+    if (room.mode === 'presencial' && actor.role === 'host') {
+      view.allowedActions = room.phase === 'LOBBY' ? ['teams', 'display', 'start', 'end'] : room.phase === 'QUESTION_RESULT' ? ['award', 'next', 'display', 'end'] : view.allowedActions;
+      view.awardedTeams = room.runId ? this.db.prepare('SELECT team FROM manual_points WHERE run_id=?').all(room.runId).map(r => r.team) : [];
+    }
     if (room.phase === 'ENDED') {
       view.podium = ranking.filter(team => team.count > 0 && team.rank <= 3).map(team => ({
         ...team, members: members.filter(player => player.team === team.id).map(({ name, avatar }) => ({ name, avatar })),
@@ -250,10 +284,10 @@ export class Game {
     const run = room.runId ? this.db.prepare('SELECT * FROM runs WHERE id=?').get(room.runId) : null;
     if (run && !['LOBBY', 'COUNTDOWN', 'ENDED'].includes(room.phase)) {
       const q = room.quiz[room.index];
-      view.question = { runId: run.id, text: q.text, options: q.options, difficulty: q.difficulty, maxPoints: q.points, opensAt: run.opens, deadlineAt: run.deadline };
+      view.question = { runId: run.id, text: q.text, options: q.options, difficulty: q.difficulty, maxPoints: room.mode === 'presencial' ? 1 : q.points, opensAt: run.opens, deadlineAt: run.deadline };
       if (actor.role === 'host') {
         view.progress = { answered: this.db.prepare('SELECT count(*) AS n FROM answers WHERE run_id=?').get(run.id).n, total: JSON.parse(run.eligible).length };
-      } else {
+      } else if (actor.role === 'player') {
         const answer = this.db.prepare('SELECT option_id FROM answers WHERE run_id=? AND player_id=?').get(run.id, actor.id);
         view.hasAnswered = Boolean(answer); view.selectedOptionId = answer?.option_id || null;
       }

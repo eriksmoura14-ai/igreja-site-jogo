@@ -33,6 +33,7 @@ export function createApp({ game, secureCookies = process.env.COOKIE_SECURE === 
     if (++entry.n > limit) throw new GameError(429, 'Muitas tentativas. Aguarde um minuto.');
   };
   const actorFor = (req, roomId, role) => {
+    if (role === 'display') return game.authenticateDisplay(cookies(req)[`despertos_display_${roomId}`], roomId);
     if (role === 'host') return game.authenticateHost(cookies(req)[HOST_COOKIE]);
     if (role === 'player') return game.authenticatePlayer(cookies(req)[PLAYER_COOKIE], roomId);
     throw new GameError(400, 'Visão inválida.');
@@ -40,7 +41,7 @@ export function createApp({ game, secureCookies = process.env.COOKIE_SECURE === 
   const publish = roomId => {
     for (const stream of streams.get(roomId) || []) {
       try {
-        stream.actor.role === 'host' ? game.authenticateHost(stream.token) : game.authenticatePlayer(stream.token, roomId);
+        actorFor({ headers: { cookie: stream.cookie } }, roomId, stream.actor.role);
         const snapshot = game.snapshot(roomId, stream.actor);
         if (stream.res.writableLength > 128 * 1024) { stream.res.destroy(); continue; }
         stream.res.write(`id: ${snapshot.sequence}\nevent: snapshot\ndata: ${JSON.stringify(snapshot)}\n\n`);
@@ -93,7 +94,7 @@ export function createApp({ game, secureCookies = process.env.COOKIE_SECURE === 
       if (url.pathname === '/api/rooms' && req.method === 'POST') {
         rate(req, 'create', 10);
         const actor = game.authenticateHost(cookies(req)[HOST_COOKIE]);
-        await body(req); return json(res, 201, game.create(actor));
+        await body(req); return json(res, 201, game.create(actor, { mode: 'presencial' }));
       }
       if (url.pathname === '/api/join' && req.method === 'POST') {
         rate(req, 'join', 30);
@@ -105,10 +106,16 @@ export function createApp({ game, secureCookies = process.env.COOKIE_SECURE === 
       if (url.pathname === '/api/player/leave' && req.method === 'POST') {
         res.setHeader('Set-Cookie', cookie(PLAYER_COOKIE, '', secureCookies, 0)); return json(res, 200, { ok: true });
       }
-      const match = url.pathname.match(/^\/api\/rooms\/([a-f0-9-]{36})\/(snapshot|events|commands|qr)$/);
+      const match = url.pathname.match(/^\/api\/rooms\/([a-f0-9-]{36})\/(snapshot|events|commands|qr|display-session)$/);
       if (match) {
         const [, roomId, route] = match;
         game.tick().forEach(publish);
+        if (route === 'display-session' && req.method === 'POST') {
+          const input = await body(req);
+          game.authenticateDisplay(input.token, roomId);
+          res.setHeader('Set-Cookie', cookie(`despertos_display_${roomId}`, input.token, secureCookies));
+          return json(res, 200, { ok: true });
+        }
         const role = url.searchParams.get('view');
         const actor = actorFor(req, roomId, role);
         const snapshot = game.snapshot(roomId, actor);
@@ -129,12 +136,12 @@ export function createApp({ game, secureCookies = process.env.COOKIE_SECURE === 
           if (globalStreams >= 1000 || [...group].filter(s => s.actor.id === actor.id).length >= 4) throw new GameError(429, 'Limite de conexões atingido.');
           streams.set(roomId, group);
           res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Connection': 'keep-alive', 'X-Accel-Buffering': 'no' });
-          const stream = { res, actor, token: cookies(req)[role === 'host' ? HOST_COOKIE : PLAYER_COOKIE] }; group.add(stream); globalStreams++;
+          const stream = { res, actor, cookie: req.headers.cookie || '', token: cookies(req)[role === 'host' ? HOST_COOKIE : PLAYER_COOKIE] }; group.add(stream); globalStreams++;
           res.write(`retry: 1500\nid: ${snapshot.sequence}\nevent: snapshot\ndata: ${JSON.stringify(snapshot)}\n\n`);
           const heartbeat = setInterval(() => {
             try {
               // Sessões expiradas ou revogadas também perdem o stream existente.
-              role === 'host' ? game.authenticateHost(stream.token) : game.authenticatePlayer(stream.token, roomId);
+              actorFor({ headers: { cookie: stream.cookie } }, roomId, role);
               game.snapshot(roomId, actor); res.write(': heartbeat\n\n');
             } catch { res.write('event: revoked\ndata: {}\n\n'); res.end(); }
           }, 15000);
@@ -154,7 +161,7 @@ export function createApp({ game, secureCookies = process.env.COOKIE_SECURE === 
         files[`/fonts/${name}.woff2`] = [`fonts/${name}.woff2`, 'font/woff2'];
       }
       let asset = files[url.pathname];
-      if (!asset && (/^\/(host|play)\/[a-f0-9-]{36}$/.test(url.pathname) || ['/', '/host', '/join'].includes(url.pathname))) asset = ['index.html', 'text/html'];
+      if (!asset && (/^\/(host|play|display)\/[a-f0-9-]{36}$/.test(url.pathname) || ['/', '/host', '/join'].includes(url.pathname))) asset = ['index.html', 'text/html'];
       if (!asset) throw new GameError(404, 'Página não encontrada.');
       if (asset[1] === 'image/png') res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
       res.writeHead(200, { 'Content-Type': asset[1].startsWith('font/') || asset[1] === 'image/png' ? asset[1] : `${asset[1]}; charset=utf-8` });

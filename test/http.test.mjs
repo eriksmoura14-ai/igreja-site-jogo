@@ -19,7 +19,7 @@ async function fixture(t, options = {}) {
   }
   const auth = await request('/api/auth/register', { username: 'anfitriao', password: 'senha-de-teste-123' });
   assert.equal(auth.res.status, 200);
-  const created = await request('/api/rooms', {}, auth.cookie); const roomId = created.value.roomId;
+  const roomId = game.create(game.authenticateHost(auth.cookie.split('=')[1])).roomId;
   const snapshot = await request(`/api/rooms/${roomId}/snapshot?view=host`, undefined, auth.cookie);
   const a = await request('/api/join', { pin: snapshot.value.pin, name: 'Ana', team: 'lion', role: 'host' });
   const b = await request('/api/join', { pin: snapshot.value.pin, name: 'Bia', team: 'wolf' });

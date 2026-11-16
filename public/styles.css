@@ -22,3 +22,6 @@
 .room-qr-card button .icon{width:14px;height:14px}
 @media(max-width:1100px){.lobby-heading{grid-template-columns:1fr;gap:24px}.room-entry-options{width:100%;max-width:620px;justify-self:center}}
 @media(max-width:600px){.room-entry-options{grid-template-columns:1fr;gap:16px}.room-entry-options .pin-card{padding:22px}.room-qr-card{padding:20px}}
+
+/* Preserve semantic visibility for links, team fields and status messages. */
+[hidden] { display: none !important; }
